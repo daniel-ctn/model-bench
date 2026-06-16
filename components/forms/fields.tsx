@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import type { Option } from "@/lib/constants";
+import { PROJECT_COLORS, type Option } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { TagsInput } from "./tags-input";
 
@@ -328,6 +328,56 @@ export function ScoreSliderField({
           </div>
         );
       }}
+    />
+  );
+}
+
+export function ColorField({
+  name,
+  label,
+}: {
+  name: string;
+  label: string;
+}) {
+  const { control } = useFormContext();
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <Field>
+          <FieldLabel>{label}</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            {PROJECT_COLORS.map((c) => (
+              <button
+                type="button"
+                key={c}
+                onClick={() => field.onChange(c)}
+                aria-label={c}
+                className={cn(
+                  "size-7 rounded-full border-2 transition-transform hover:scale-110",
+                  field.value === c
+                    ? "border-foreground"
+                    : "border-transparent",
+                )}
+                style={{ backgroundColor: c }}
+              />
+            ))}
+            <label className="border-border relative size-7 cursor-pointer overflow-hidden rounded-full border">
+              <input
+                type="color"
+                value={field.value ?? "#7c5cff"}
+                onChange={(e) => field.onChange(e.target.value)}
+                className="absolute inset-0 size-full cursor-pointer opacity-0"
+              />
+              <span
+                className="block size-full"
+                style={{ backgroundColor: field.value }}
+              />
+            </label>
+          </div>
+        </Field>
+      )}
     />
   );
 }
