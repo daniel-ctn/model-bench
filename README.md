@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ModelBench Journal
 
-## Getting Started
+A personal command center for tracking the **real value** of AI models and tools
+across coding, writing, research, debugging, UI work and product thinking — not
+vanity metrics like token counts. Log each meaningful AI session, score it, and
+the app tells you which model/tool actually saves time, which wastes it, which is
+worth its quota, and when a flagship model beats a cheaper one.
 
-First, run the development server:
+> Status: `current`. Solo, personal-use app. Dark, premium dashboard UI.
+
+## Stack
+
+- **Next.js 16** (App Router, Server Actions, Turbopack) + **React 19**
+- **TypeScript**
+- **Tailwind CSS v4** + **shadcn/ui** (base-ui primitives)
+- **Drizzle ORM** + **PostgreSQL** (Neon-ready, via `postgres-js`)
+- **React Hook Form** + **Zod 4** (Standard Schema resolver)
+- **Recharts** for charts, **date-fns**, **lucide-react**
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+
+# 1. Point at a Postgres/Neon database
+cp .env.example .env          # then edit DATABASE_URL
+
+# 2. Create the schema
+pnpm db:push                  # or: pnpm db:migrate (uses db/migrations)
+
+# 3. (optional) Load realistic sample data
+pnpm db:seed
+
+# 4. Run it
+pnpm dev                      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Any PostgreSQL-compatible database works. For **Neon**, use the *pooled*
+connection string. The app reads `DATABASE_URL` and connects lazily, so it
+builds fine without a database — but pages need one at runtime.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | What it does |
+| --- | --- |
+| `pnpm dev` | Start the dev server |
+| `pnpm build` / `pnpm start` | Production build / serve |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm lint` | ESLint |
+| `pnpm db:generate` | Generate a migration from the schema |
+| `pnpm db:push` | Push the schema to the database |
+| `pnpm db:migrate` | Apply migrations in `db/migrations` |
+| `pnpm db:studio` | Drizzle Studio |
+| `pnpm db:seed` | Reset + load sample data |
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- **Dashboard** — sessions this month, net time saved, cost, avg quality (with
+  month-over-month deltas), best model by quality and cost-value, worst failure
+  pattern, usage donut, score/reliability trend, time saved vs spent, cost-vs-
+  quality scatter, top models, and sessions to review.
+- **Sessions** — filterable/searchable table (project, tool, model, task type,
+  result, quality, has-failure, date range), rich create/edit form with **fast
+  presets** (coding agent, UI/refactor, research, writing, model comparison),
+  inline failure patterns, and a detailed session view.
+- **Models / Tools / Projects** — full CRUD, per-entity dashboards (best/worst
+  task types, common failures, session history), and compare leaderboards.
+- **Insights** — durable observations linked to a model/tool/project, with
+  confidence and active/outdated/confirmed status.
+- **Reports** — weekly review, monthly model ranking, best model by task type,
+  cost-value & reliability leaderboards, failure heatmap, and a
+  "is the strong model worth it?" comparison.
+- **Data** — JSON backup export/import (non-destructive) and sessions CSV export.
+- **Cmd/Ctrl+K** command palette for quick search, create and navigation.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Calculated metrics (`lib/metrics`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Net time saved** = `estimatedTimeSavedMinutes − timeSpentMinutes`
+- **Cost-value index** = `qualityScore / estimatedCostUsd` (free → high, unknown → excluded)
+- **Reliability index (0–100)** — blends result status, human intervention, test
+  outcomes, regressions and follow-up needs.
+- **Worth-it verdict** — Definitely worth it / Good enough / Too expensive /
+  Avoid for this task.
 
-## Deploy on Vercel
+## Project structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+app/            routes, server actions, route handlers (api/export/*)
+components/     ui (shadcn), charts/, forms/, tables/, filters/, layout/
+db/             schema.ts, index.ts (client), queries/, migrations/
+lib/            metrics/, validations/, constants, format, normalize, nav
+seed/           sample data (pnpm db:seed)
+types/          shared types
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Auth (later)
+
+There is no auth yet. Data access is centralized in `db/queries/*` and mutations
+in per-feature `actions.ts`, so adding **BetterAuth** later means gating those
+entry points and (optionally) adding a `userId` column — no UI rewrites.

@@ -28,7 +28,7 @@ import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { listSessions } from "@/db/queries";
-import { failureTypeLabels, modelProviderLabels } from "@/lib/constants";
+import { failureTypeLabels } from "@/lib/constants";
 import {
   formatCurrency,
   formatDate,
@@ -39,7 +39,6 @@ import {
   bestBy,
   byModel,
   byTool,
-  costValueIndex,
   distribution,
   leaderboard,
   reliabilityIndex,
