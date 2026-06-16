@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "@/components/layout/app-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -35,7 +36,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-background text-foreground min-h-full">
-        <TooltipProvider delay={150}>{children}</TooltipProvider>
+        <TooltipProvider delay={150}>
+          <AppShell>{children}</AppShell>
+        </TooltipProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>
