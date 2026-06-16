@@ -114,7 +114,8 @@ export async function updateSession(
     await db.transaction(async (tx) => {
       const updated = await tx
         .update(sessions)
-        .set(toRow(v))
+        // Saving an edited session also confirms an AI-ingested draft.
+        .set({ ...toRow(v), draft: false })
         .where(and(eq(sessions.id, id), eq(sessions.ownerId, userId)))
         .returning({ id: sessions.id });
       if (!updated.length) throw new Error("Session not found.");
@@ -124,6 +125,23 @@ export async function updateSession(
       const rows = failureRows(id, v);
       if (rows.length) await tx.insert(failurePatterns).values(rows);
     });
+    revalidateAll();
+    revalidatePath(`/sessions/${id}`);
+    return ok({ id });
+  } catch (e) {
+    return fail(errMessage(e));
+  }
+}
+
+export async function confirmSession(
+  id: string,
+): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
+  try {
+    await db
+      .update(sessions)
+      .set({ draft: false })
+      .where(and(eq(sessions.id, id), eq(sessions.ownerId, userId)));
     revalidateAll();
     revalidatePath(`/sessions/${id}`);
     return ok({ id });

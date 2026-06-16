@@ -173,6 +173,8 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Personal token agents use to POST draft sessions to /api/sessions/ingest.
+  ingestToken: text("ingest_token").unique(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
@@ -323,6 +325,8 @@ export const sessions = pgTable("sessions", {
   doDifferently: text("do_differently"),
   notes: text("notes"),
   tags: text("tags").array().notNull().default([]),
+  // AI-ingested entries land as drafts pending review.
+  draft: boolean("draft").notNull().default(false),
   createdAt,
   updatedAt,
 });

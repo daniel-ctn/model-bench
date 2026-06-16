@@ -26,6 +26,10 @@ export type SessionFilters = {
   minQuality?: number;
   hasFailure?: boolean;
   search?: string;
+  /** Only return AI-ingested drafts awaiting review. */
+  draftsOnly?: boolean;
+  /** Include drafts alongside confirmed sessions. */
+  includeDrafts?: boolean;
 };
 
 function matchesSearch(s: SessionWithRelations, query: string): boolean {
@@ -55,6 +59,8 @@ export async function listSessions(
 ): Promise<SessionWithRelations[]> {
   const userId = await requireUserId();
   const conditions: SQL[] = [eq(sessions.ownerId, userId)];
+  if (filters.draftsOnly) conditions.push(eq(sessions.draft, true));
+  else if (!filters.includeDrafts) conditions.push(eq(sessions.draft, false));
   if (filters.projectId) conditions.push(eq(sessions.projectId, filters.projectId));
   if (filters.toolId) conditions.push(eq(sessions.toolId, filters.toolId));
   if (filters.modelId) conditions.push(eq(sessions.modelId, filters.modelId));
@@ -101,7 +107,7 @@ export async function getRecentSessions(
 ): Promise<SessionWithRelations[]> {
   const userId = await requireUserId();
   const rows = (await db.query.sessions.findMany({
-    where: eq(sessions.ownerId, userId),
+    where: and(eq(sessions.ownerId, userId), eq(sessions.draft, false)),
     with: withRelations,
     orderBy: (s, { desc }) => [desc(s.date), desc(s.createdAt)],
     limit,

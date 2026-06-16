@@ -15,6 +15,13 @@
       "when": 1781576627155,
       "tag": "0001_pale_omega_flight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781578583357,
+      "tag": "0002_curious_echo",
+      "breakpoints": true
     }
   ]
 }
