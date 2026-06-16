@@ -1,15 +1,24 @@
 import "dotenv/config";
 
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { eq, isNull, or } from "drizzle-orm";
+
 import { db } from "@/db";
 import {
+  account,
   aiTools,
   failurePatterns,
   insights,
   models,
   projects,
+  session,
   sessions,
+  user,
+  verification,
   type NewSession,
 } from "@/db/schema";
+import { DEMO_EMAIL, DEMO_NAME, DEMO_PASSWORD } from "@/lib/demo";
 
 const now = new Date();
 function daysAgo(n: number): Date {
@@ -19,19 +28,58 @@ function daysAgo(n: number): Date {
   return d;
 }
 
-async function reset() {
-  // Children first; FKs are set-null / cascade but explicit order is clearest.
-  await db.delete(failurePatterns);
-  await db.delete(insights);
-  await db.delete(sessions);
-  await db.delete(models);
-  await db.delete(aiTools);
-  await db.delete(projects);
+/** Create the demo account (idempotent) and return its id. */
+async function ensureDemoUser(): Promise<string> {
+  const existing = await db.query.user.findFirst({
+    where: eq(user.email, DEMO_EMAIL),
+  });
+  if (existing) return existing.id;
+
+  // Minimal auth instance (no nextCookies) so it runs outside a request.
+  const seedAuth = betterAuth({
+    secret: process.env.BETTER_AUTH_SECRET ?? "dev-insecure-secret-change-me",
+    database: drizzleAdapter(db, {
+      provider: "pg",
+      schema: { user, session, account, verification },
+    }),
+    emailAndPassword: { enabled: true, autoSignIn: false },
+  });
+  await seedAuth.api.signUpEmail({
+    body: { email: DEMO_EMAIL, password: DEMO_PASSWORD, name: DEMO_NAME },
+  });
+  const created = await db.query.user.findFirst({
+    where: eq(user.email, DEMO_EMAIL),
+  });
+  if (!created) throw new Error("Could not create the demo user.");
+  return created.id;
+}
+
+/** Wipe the demo account's data (and any pre-auth orphan rows). */
+async function resetFor(ownerId: string) {
+  // Deleting sessions cascades to failure patterns.
+  await db
+    .delete(sessions)
+    .where(or(eq(sessions.ownerId, ownerId), isNull(sessions.ownerId)));
+  await db
+    .delete(insights)
+    .where(or(eq(insights.ownerId, ownerId), isNull(insights.ownerId)));
+  await db
+    .delete(models)
+    .where(or(eq(models.ownerId, ownerId), isNull(models.ownerId)));
+  await db
+    .delete(aiTools)
+    .where(or(eq(aiTools.ownerId, ownerId), isNull(aiTools.ownerId)));
+  await db
+    .delete(projects)
+    .where(or(eq(projects.ownerId, ownerId), isNull(projects.ownerId)));
 }
 
 async function main() {
-  console.log("Resetting tables…");
-  await reset();
+  console.log("Ensuring demo account…");
+  const ownerId = await ensureDemoUser();
+
+  console.log("Resetting demo data…");
+  await resetFor(ownerId);
 
   console.log("Seeding projects, tools, models…");
   const projectRows = await db
@@ -1012,6 +1060,15 @@ async function main() {
       status: "active",
     },
   ]);
+
+  // Stamp ownership on everything just inserted (rows went in with null owner,
+  // and resetFor cleared any prior null-owner rows).
+  console.log("Assigning ownership to the demo account…");
+  await db.update(projects).set({ ownerId }).where(isNull(projects.ownerId));
+  await db.update(aiTools).set({ ownerId }).where(isNull(aiTools.ownerId));
+  await db.update(models).set({ ownerId }).where(isNull(models.ownerId));
+  await db.update(sessions).set({ ownerId }).where(isNull(sessions.ownerId));
+  await db.update(insights).set({ ownerId }).where(isNull(insights.ownerId));
 
   console.log("Seed complete ✓");
 }

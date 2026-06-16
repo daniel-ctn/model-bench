@@ -14,6 +14,7 @@ worth its quota, and when a flagship model beats a cheaper one.
 - **TypeScript**
 - **Tailwind CSS v4** + **shadcn/ui** (base-ui primitives)
 - **Drizzle ORM** + **PostgreSQL** (Neon-ready, via `postgres-js`)
+- **better-auth** (email/password, per-user data)
 - **React Hook Form** + **Zod 4** (Standard Schema resolver)
 - **Recharts** for charts, **date-fns**, **lucide-react**
 
@@ -22,18 +23,22 @@ worth its quota, and when a flagship model beats a cheaper one.
 ```bash
 pnpm install
 
-# 1. Point at a Postgres/Neon database
-cp .env.example .env          # then edit DATABASE_URL
+# 1. Configure env: DATABASE_URL + a BETTER_AUTH_SECRET
+cp .env.example .env
+#   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 # 2. Create the schema
-pnpm db:push                  # or: pnpm db:migrate (uses db/migrations)
+pnpm db:migrate               # or: pnpm db:push
 
-# 3. (optional) Load realistic sample data
+# 3. Load the demo account + realistic sample data
 pnpm db:seed
 
 # 4. Run it
 pnpm dev                      # http://localhost:3000
 ```
+
+Then sign up for a fresh empty workspace, or click **Explore the demo** on the
+login screen to browse the seeded data.
 
 Any PostgreSQL-compatible database works. For **Neon**, use the *pooled*
 connection string. The app reads `DATABASE_URL` and connects lazily, so it
@@ -93,8 +98,18 @@ seed/           sample data (pnpm db:seed)
 types/          shared types
 ```
 
-## Auth (later)
+## Authentication
 
-There is no auth yet. Data access is centralized in `db/queries/*` and mutations
-in per-feature `actions.ts`, so adding **BetterAuth** later means gating those
-entry points and (optionally) adding a `userId` column — no UI rewrites.
+Email/password auth via **better-auth**, with per-user data isolation
+(`ownerId` on every entity; all queries and actions are scoped to the signed-in
+user).
+
+- **Sign up** creates a fresh, empty workspace.
+- **Explore the demo** signs into a shared demo account that owns the seed data.
+- **Forgot/reset password** works out of the box — with `RESEND_API_KEY` set the
+  reset link is emailed, otherwise it's printed to the server console.
+- **Change password** lives on the Account page (revokes other sessions).
+
+Routes are guarded by `proxy.ts` (optimistic redirect) plus server-side
+`requireUserId` checks in every query/action. `pnpm db:seed` creates the demo
+account (`lib/demo.ts`) and assigns all sample data to it.
