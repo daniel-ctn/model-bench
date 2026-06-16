@@ -32,6 +32,12 @@ const FAILURE_OPTIONS: Option[] = [
   { value: "0", label: "No failures" },
 ];
 
+const DRAFT_OPTIONS: Option[] = [
+  { value: "confirmed", label: "Confirmed" },
+  { value: "1", label: "Drafts only" },
+  { value: "all", label: "All + drafts" },
+];
+
 const withAll = (label: string, options: readonly Option[]): Option[] => [
   { value: "all", label },
   ...options,
@@ -89,9 +95,17 @@ export function SessionsFilterBar({ lookups }: { lookups: FormLookups }) {
     "result",
     "minq",
     "fail",
+    "draft",
     "from",
     "to",
   ].filter((k) => params.get(k)).length;
+
+  const draftValue =
+    params.get("draft") === "1"
+      ? "1"
+      : params.get("draft") === "all"
+        ? "all"
+        : "confirmed";
 
   const clearAll = () => {
     setSearch("");
@@ -127,7 +141,7 @@ export function SessionsFilterBar({ lookups }: { lookups: FormLookups }) {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         <SelectField
           size="sm"
           value={get("project")}
@@ -169,6 +183,12 @@ export function SessionsFilterBar({ lookups }: { lookups: FormLookups }) {
           value={get("fail")}
           onValueChange={(v) => sel("fail", v)}
           options={FAILURE_OPTIONS}
+        />
+        <SelectField
+          size="sm"
+          value={draftValue}
+          onValueChange={(v) => setParam("draft", v === "confirmed" ? null : v)}
+          options={DRAFT_OPTIONS}
         />
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -28,8 +29,11 @@ export function DeleteAction({
   entityLabel?: string;
   name?: string;
   redirectTo?: string;
-  /** Render prop receiving an `open()` callback to wire any trigger element. */
-  trigger: (open: () => void) => React.ReactNode;
+  /**
+   * Optional render prop (client callers only) receiving an `open()` callback.
+   * Omit it from Server Components — a default destructive button is rendered.
+   */
+  trigger?: (open: () => void) => React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -51,7 +55,14 @@ export function DeleteAction({
 
   return (
     <>
-      {trigger(() => setOpen(true))}
+      {trigger ? (
+        trigger(() => setOpen(true))
+      ) : (
+        <Button variant="destructive" size="sm" onClick={() => setOpen(true)}>
+          <Trash2 />
+          Delete
+        </Button>
+      )}
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

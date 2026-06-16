@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ResultStatusBadge, ScoreBadge } from "@/components/badges";
 import { TagList } from "@/components/tag-list";
+import { ToneBadge } from "@/components/tone-badge";
 import {
   Table,
   TableBody,
@@ -47,12 +48,19 @@ export function SessionsTable({
             return (
               <TableRow key={s.id} className="group">
                 <TableCell className="max-w-[320px]">
-                  <Link
-                    href={`/sessions/${s.id}`}
-                    className="group-hover:text-primary block truncate font-medium transition-colors"
-                  >
-                    {s.title}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/sessions/${s.id}`}
+                      className="group-hover:text-primary truncate font-medium transition-colors"
+                    >
+                      {s.title}
+                    </Link>
+                    {s.draft ? (
+                      <ToneBadge tone="warning" className="shrink-0">
+                        Draft
+                      </ToneBadge>
+                    ) : null}
+                  </div>
                   <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
                     {s.project ? (
                       <span className="truncate">{s.project.name}</span>

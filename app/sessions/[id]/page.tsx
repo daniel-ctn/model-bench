@@ -6,7 +6,7 @@ import {
   CircleX,
   Lightbulb,
   Pencil,
-  Trash2,
+  Sparkles,
 } from "lucide-react";
 
 import {
@@ -18,6 +18,7 @@ import {
   WorthItBadge,
 } from "@/components/badges";
 import { ScoreRadar } from "@/components/charts/score-radar";
+import { ConfirmSessionButton } from "@/components/sessions/confirm-session-button";
 import { DeleteAction } from "@/components/delete-action";
 import { PageContainer } from "@/components/layout/page-header";
 import { SectionCard } from "@/components/section-card";
@@ -128,6 +129,21 @@ export default async function SessionDetailPage({
         Sessions
       </Button>
 
+      {s.draft ? (
+        <div className="border-warning/30 bg-warning/10 mb-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2.5">
+            <Sparkles className="text-warning mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">AI-generated draft</p>
+              <p className="text-muted-foreground text-xs">
+                Review the scores and details, then confirm — or edit to save.
+              </p>
+            </div>
+          </div>
+          <ConfirmSessionButton id={s.id} />
+        </div>
+      ) : null}
+
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">{s.title}</h1>
@@ -153,17 +169,6 @@ export default async function SessionDetailPage({
             name={s.title}
             redirectTo="/sessions"
             action={deleteSession.bind(null, s.id)}
-            trigger={(open) => (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={open}
-                aria-label="Delete session"
-              >
-                <Trash2 />
-                Delete
-              </Button>
-            )}
           />
         </div>
       </div>

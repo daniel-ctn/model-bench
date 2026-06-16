@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 
 import { ModelStrengthBadge } from "@/components/badges";
 import { EntityDashboard } from "@/components/entity-dashboard";
@@ -79,12 +79,6 @@ export default async function ModelDetailPage({
             name={model.name}
             redirectTo="/models"
             action={deleteModel.bind(null, model.id)}
-            trigger={(open) => (
-              <Button variant="destructive" size="sm" onClick={open}>
-                <Trash2 />
-                Delete
-              </Button>
-            )}
           />
         </div>
       </div>

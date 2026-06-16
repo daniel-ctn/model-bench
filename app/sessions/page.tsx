@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, SearchX } from "lucide-react";
+import { Plus, SearchX, Sparkles } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { SessionsFilterBar } from "@/components/filters/sessions-filter-bar";
@@ -24,6 +24,7 @@ function buildFilters(sp: SearchParams): SessionFilters {
   const result = first(sp.result);
   const minq = first(sp.minq);
   const fail = first(sp.fail);
+  const draft = first(sp.draft);
   const from = first(sp.from);
   const to = first(sp.to);
 
@@ -40,6 +41,8 @@ function buildFilters(sp: SearchParams): SessionFilters {
       : undefined,
     minQuality: minq ? Number(minq) : undefined,
     hasFailure: fail === "1" ? true : fail === "0" ? false : undefined,
+    draftsOnly: draft === "1",
+    includeDrafts: draft === "all",
     from: from ? dateFromInput(from) : undefined,
     to: to ? dateFromInput(to) : undefined,
   };
@@ -52,10 +55,12 @@ export default async function SessionsPage({
 }) {
   const sp = await searchParams;
   const filters = buildFilters(sp);
-  const [sessions, lookups] = await Promise.all([
+  const [sessions, lookups, drafts] = await Promise.all([
     listSessions(filters),
     getFormLookups(),
+    listSessions({ draftsOnly: true }),
   ]);
+  const draftCount = drafts.length;
 
   const hasFilters = Object.values(sp).some(Boolean);
 
@@ -70,6 +75,22 @@ export default async function SessionsPage({
           New session
         </Button>
       </PageHeader>
+
+      {draftCount > 0 && !filters.draftsOnly ? (
+        <div className="border-warning/30 bg-warning/10 mb-4 flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
+          <span className="flex items-center gap-2 text-sm">
+            <Sparkles className="text-warning size-4" />
+            {draftCount} AI draft{draftCount === 1 ? "" : "s"} awaiting review
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            render={<Link href="/sessions?draft=1" />}
+          >
+            Review drafts
+          </Button>
+        </div>
+      ) : null}
 
       <SessionsFilterBar lookups={lookups} />
 

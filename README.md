@@ -113,3 +113,35 @@ user).
 Routes are guarded by `proxy.ts` (optimistic redirect) plus server-side
 `requireUserId` checks in every query/action. `pnpm db:seed` creates the demo
 account (`lib/demo.ts`) and assigns all sample data to it.
+
+## Agent ingestion (draft sessions)
+
+Instead of typing every session, let an agent log it for you. Generate a token
+on the **Account** page, then have your agent `POST` a session to the ingest
+endpoint — it lands as a **draft** you review and confirm (drafts are excluded
+from all analytics until confirmed).
+
+```bash
+curl -X POST "$BETTER_AUTH_URL/api/sessions/ingest" \
+  -H "Authorization: Bearer <your-ingest-token>" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "Refactor checkout", "tool": "Claude Code",
+        "model": "Opus 4.8", "project": "SmartTrips", "taskType": "refactor",
+        "resultStatus": "good", "timeSpentMinutes": 35,
+        "estimatedTimeSavedMinutes": 150, "estimatedCostUsd": 0.9,
+        "qualityScore": 8, "tags": ["rsc"] }'
+```
+
+- Relations (`tool` / `model` / `project` / `followupModel`) are matched by name
+  for your account; unknown names are left unlinked.
+- Enums are forgiving (bad values fall back to a sensible default); only `title`
+  is required.
+- On a **subscription** plan there's no real per-task dollar cost, so set
+  `estimatedCostUsd` to the *notional* API-equivalent cost (e.g. what
+  [`ccusage`](https://ccusage.com) computes from tokens) and use `quotaFeeling`
+  for subscription pressure. Per-session cost/usage is available from Claude
+  Code (`/cost`, OpenTelemetry, `ccusage`) and Codex (`/status`, `ccusage`).
+
+A good workflow: a `SessionEnd` hook runs `ccusage` for the cost + an evaluator
+prompt (ideally a *different* model than the one that did the work) to draft the
+scores, then POSTs to the endpoint.

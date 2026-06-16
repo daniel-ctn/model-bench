@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Boxes, Clock, Pencil, Trash2, Wrench } from "lucide-react";
+import { ArrowLeft, Boxes, Clock, Pencil, Wrench } from "lucide-react";
 
 import { ProjectStatusBadge } from "@/components/badges";
 import { EntityDashboard } from "@/components/entity-dashboard";
@@ -118,12 +118,6 @@ export default async function ProjectDetailPage({
             name={project.name}
             redirectTo="/projects"
             action={deleteProject.bind(null, project.id)}
-            trigger={(open) => (
-              <Button variant="destructive" size="sm" onClick={open}>
-                <Trash2 />
-                Delete
-              </Button>
-            )}
           />
         </div>
       </div>

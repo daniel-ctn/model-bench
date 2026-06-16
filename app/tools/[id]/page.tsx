@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 
 import { EntityDashboard } from "@/components/entity-dashboard";
 import { DeleteAction } from "@/components/delete-action";
@@ -70,12 +70,6 @@ export default async function ToolDetailPage({
             name={tool.name}
             redirectTo="/tools"
             action={deleteTool.bind(null, tool.id)}
-            trigger={(open) => (
-              <Button variant="destructive" size="sm" onClick={open}>
-                <Trash2 />
-                Delete
-              </Button>
-            )}
           />
         </div>
       </div>
