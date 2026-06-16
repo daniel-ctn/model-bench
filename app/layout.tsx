@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "@/components/layout/app-shell";
+import { ConditionalShell } from "@/components/layout/conditional-shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -37,7 +37,7 @@ export default function RootLayout({
     >
       <body className="bg-background text-foreground min-h-full">
         <TooltipProvider delay={150}>
-          <AppShell>{children}</AppShell>
+          <ConditionalShell>{children}</ConditionalShell>
         </TooltipProvider>
         <Toaster richColors position="top-right" />
       </body>

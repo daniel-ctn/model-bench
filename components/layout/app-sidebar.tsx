@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { isActive, mainNav, utilityNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { UserMenu } from "./user-menu";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -99,6 +100,7 @@ export function AppSidebar() {
             New session
           </span>
         </Link>
+        <UserMenu />
       </SidebarFooter>
     </Sidebar>
   );
