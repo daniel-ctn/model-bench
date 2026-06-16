@@ -258,9 +258,10 @@ ${lastOutput.slice(0, 3000)}`;
 }
 
 function buildEvalArgs(prompt) {
-  const a = ["-p", prompt, "--output-format", "text"];
-  if (process.env.MODELBENCH_EVAL_MODEL) a.push("--model", process.env.MODELBENCH_EVAL_MODEL);
-  return a;
+  // Default to a small/cheap model — the eval prompt is tiny, so this keeps
+  // token usage (real $ on API key, or subscription quota) minimal.
+  const model = process.env.MODELBENCH_EVAL_MODEL || "haiku";
+  return ["-p", prompt, "--output-format", "text", "--model", model];
 }
 
 function extractJson(text) {

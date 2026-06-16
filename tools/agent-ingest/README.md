@@ -9,6 +9,23 @@ transcript, computes a notional cost via [`ccusage`](https://ccusage.com), asks 
 > uses the `claude` CLI by default — pick a *different/cheaper* model than the
 > one that did the work to reduce self-grading bias.
 
+## What the evaluator costs
+
+Parsing the transcript, `ccusage`, and the POST are free. The only consumption
+is the **evaluator LLM call**, which follows Claude Code's own auth:
+
+- **Subscription (Max/Pro)**, no `ANTHROPIC_API_KEY` in the hook's env → uses
+  your subscription (no per-token charge, but it spends your usage quota).
+- **`ANTHROPIC_API_KEY` set** → bills the API per token (real $). The hook
+  inherits your shell env, so unset/avoid that key here if you want it on the
+  subscription.
+
+To keep it tiny it defaults to the **`haiku`** model on a small prompt. To spend
+*nothing* extra, run with **`--no-eval`** — you still get a draft with the tool,
+model, cost, duration, prompt/output summaries and tags; you just fill the
+scores yourself. You can also point `MODELBENCH_EVAL_CMD` at a local model
+(e.g. Ollama) for a free evaluator (match its CLI flags).
+
 ## 1. Configure env
 
 Get a token from the app's **Account → Agent ingestion** page.
