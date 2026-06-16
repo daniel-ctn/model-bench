@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -163,23 +164,87 @@ const updatedAt = timestamp("updated_at", { mode: "date" })
   .$onUpdate(() => new Date());
 
 /* -------------------------------------------------------------------------- */
+/*  Auth tables (better-auth)                                                   */
+/* -------------------------------------------------------------------------- */
+
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const session = pgTable("session", {
+  id: text("id").primaryKey(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+});
+
+export const account = pgTable("account", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", { mode: "date" }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { mode: "date" }),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const verification = pgTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+/* -------------------------------------------------------------------------- */
 /*  Tables                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export const projects = pgTable("projects", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  slug: text("slug").notNull().unique(),
-  description: text("description"),
-  type: projectTypeEnum("type").notNull().default("personal"),
-  status: projectStatusEnum("status").notNull().default("active"),
-  color: text("color").notNull().default("#7c5cff"),
-  createdAt,
-  updatedAt,
+const ownerId = text("owner_id").references(() => user.id, {
+  onDelete: "cascade",
 });
+
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId,
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    type: projectTypeEnum("type").notNull().default("personal"),
+    status: projectStatusEnum("status").notNull().default("active"),
+    color: text("color").notNull().default("#7c5cff"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [uniqueIndex("projects_owner_slug_unique").on(t.ownerId, t.slug)],
+);
 
 export const aiTools = pgTable("ai_tools", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerId,
   name: text("name").notNull(),
   category: toolCategoryEnum("category").notNull().default("other"),
   website: text("website"),
@@ -190,6 +255,7 @@ export const aiTools = pgTable("ai_tools", {
 
 export const models = pgTable("models", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerId,
   provider: modelProviderEnum("provider").notNull().default("other"),
   name: text("name").notNull(),
   shortName: text("short_name"),
@@ -207,6 +273,7 @@ export const models = pgTable("models", {
 
 export const sessions = pgTable("sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerId,
   title: text("title").notNull(),
   date: timestamp("session_date", { mode: "date" }).notNull().defaultNow(),
   projectId: uuid("project_id").references(() => projects.id, {
@@ -274,6 +341,7 @@ export const failurePatterns = pgTable("failure_patterns", {
 
 export const insights = pgTable("insights", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ownerId,
   title: text("title").notNull(),
   description: text("description"),
   relatedToolId: uuid("related_tool_id").references(() => aiTools.id, {
