@@ -44,7 +44,7 @@ export function formatNumber(
 
 export function formatScore(value: number | null | undefined): string {
   if (value == null) return "—";
-  return `${formatNumber(value, 1)}`;
+  return value.toFixed(2);
 }
 
 export function formatPercent(

@@ -115,10 +115,9 @@ export function ScoreBadge({
   if (value == null) {
     return <span className="text-muted-foreground text-sm">—</span>;
   }
-  const display = Number.isInteger(value) ? value : Math.round(value * 10) / 10;
   return (
     <ToneBadge tone={scoreTone(value)} className={cn("tabnum", className)}>
-      {display}
+      {value.toFixed(2)}
     </ToneBadge>
   );
 }
