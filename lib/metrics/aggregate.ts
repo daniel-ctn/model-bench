@@ -159,6 +159,37 @@ export function worstBy(
   );
 }
 
+export type LeaderboardSortKey =
+  | "quality"
+  | "costValue"
+  | "reliability"
+  | "net"
+  | "count"
+  | "success";
+
+export function sortLeaderboard(
+  rows: LeaderboardRow[],
+  key: LeaderboardSortKey,
+): LeaderboardRow[] {
+  const metric = (s: GroupStats): number => {
+    switch (key) {
+      case "quality":
+        return s.avgQuality ?? -1;
+      case "costValue":
+        return s.avgCostValue ?? -1;
+      case "reliability":
+        return s.avgReliability ?? -1;
+      case "net":
+        return s.netTimeSavedMinutes;
+      case "count":
+        return s.count;
+      case "success":
+        return s.successRate;
+    }
+  };
+  return [...rows].sort((a, b) => metric(b.stats) - metric(a.stats));
+}
+
 /* ----------------------------- distributions ------------------------------ */
 
 export type DistItem = { id: string; label: string; value: number };

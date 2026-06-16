@@ -313,3 +313,13 @@ export const SECONDARY_SCORE_FIELDS = [
 ] as const;
 
 export type SecondaryScoreKey = (typeof SECONDARY_SCORE_FIELDS)[number]["key"];
+
+/** Sort options for compare/leaderboard views. First entry is the default. */
+export const leaderboardSortOptions: Option[] = [
+  { value: "quality", label: "Avg quality" },
+  { value: "costValue", label: "Cost-value" },
+  { value: "reliability", label: "Reliability" },
+  { value: "net", label: "Net time saved" },
+  { value: "count", label: "Most used" },
+  { value: "success", label: "Success rate" },
+];

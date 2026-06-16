@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   FormProvider,
   useFieldArray,
@@ -13,7 +11,6 @@ import { toast } from "sonner";
 import {
   Bot,
   FlaskConical,
-  Loader2,
   Palette,
   PenLine,
   Plus,
@@ -30,14 +27,8 @@ import {
   TextField,
   TextareaField,
 } from "@/components/forms/fields";
+import { FormBar, FormSection, useEntitySubmit } from "@/components/forms/form-utils";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { createSession, updateSession } from "@/app/sessions/actions";
 import type { FormLookups } from "@/db/queries/lookups";
 import { zodFormResolver } from "@/lib/resolver";
@@ -73,28 +64,6 @@ const PRESETS: { key: PresetKey; label: string; icon: typeof Bot }[] = [
   { key: "comparison", label: "Model comparison", icon: FlaskConical },
 ];
 
-function FormSection({
-  title,
-  description,
-  children,
-  className,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
-      </CardHeader>
-      <CardContent className={className}>{children}</CardContent>
-    </Card>
-  );
-}
-
 export function SessionForm({
   lookups,
   mode,
@@ -106,12 +75,11 @@ export function SessionForm({
   sessionId?: string;
   initialValues?: SessionFormValues;
 }) {
-  const router = useRouter();
   const form = useForm<SessionFormValues>({
     resolver: zodFormResolver(sessionFormSchema),
     defaultValues: initialValues ?? makeSessionDefaults(),
   });
-  const { control, handleSubmit, setValue, getValues, setError } = form;
+  const { control, setValue, getValues } = form;
 
   const failures = useFieldArray({ control, name: "failurePatterns" });
 
@@ -188,29 +156,15 @@ export function SessionForm({
     toast.message(`Applied “${PRESETS.find((p) => p.key === key)?.label}” preset`);
   }
 
-  const onSubmit = handleSubmit(async (values) => {
-    const res =
+  const onSubmit = useEntitySubmit(
+    form,
+    (values) =>
       mode === "create"
-        ? await createSession(values)
-        : await updateSession(sessionId!, values);
-
-    if (!res.ok) {
-      if (res.fieldErrors) {
-        for (const [key, messages] of Object.entries(res.fieldErrors)) {
-          setError(key as Path<SessionFormValues>, {
-            message: messages.join(", "),
-          });
-        }
-      }
-      toast.error(res.error);
-      return;
-    }
-    toast.success(mode === "create" ? "Session logged." : "Session updated.");
-    router.push(`/sessions/${res.data.id}`);
-    router.refresh();
-  });
-
-  const isSubmitting = form.formState.isSubmitting;
+        ? createSession(values)
+        : updateSession(sessionId!, values),
+    (id) => `/sessions/${id}`,
+    mode === "create" ? "Session logged." : "Session updated.",
+  );
 
   return (
     <FormProvider {...form}>
@@ -462,24 +416,11 @@ export function SessionForm({
           </div>
         </FormSection>
 
-        {/* Floating sticky action bar */}
-        <div className="sticky bottom-4 z-20 mt-1">
-          <div className="bg-card/95 flex items-center justify-end gap-2 rounded-xl border px-4 py-3 shadow-lg backdrop-blur">
-            <Button
-              type="button"
-              variant="ghost"
-              render={
-                <Link href={sessionId ? `/sessions/${sessionId}` : "/sessions"} />
-              }
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="animate-spin" /> : null}
-              {mode === "create" ? "Log session" : "Save changes"}
-            </Button>
-          </div>
-        </div>
+        <FormBar
+          cancelHref={sessionId ? `/sessions/${sessionId}` : "/sessions"}
+          submitLabel={mode === "create" ? "Log session" : "Save changes"}
+          pending={form.formState.isSubmitting}
+        />
       </form>
     </FormProvider>
   );
