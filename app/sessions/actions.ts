@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { failurePatterns, sessions } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
 import { dateFromInput, idOrNull, textOrNull } from "@/lib/normalize";
 import { sessionFormSchema, type SessionFormValues } from "@/lib/validations";
@@ -81,12 +82,13 @@ export async function createSession(
   const parsed = sessionFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
   const v = parsed.data;
+  const userId = await requireUserId();
 
   try {
     const id = await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(sessions)
-        .values(toRow(v))
+        .values({ ...toRow(v), ownerId: userId })
         .returning({ id: sessions.id });
       const rows = failureRows(row.id, v);
       if (rows.length) await tx.insert(failurePatterns).values(rows);
@@ -106,10 +108,16 @@ export async function updateSession(
   const parsed = sessionFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
   const v = parsed.data;
+  const userId = await requireUserId();
 
   try {
     await db.transaction(async (tx) => {
-      await tx.update(sessions).set(toRow(v)).where(eq(sessions.id, id));
+      const updated = await tx
+        .update(sessions)
+        .set(toRow(v))
+        .where(and(eq(sessions.id, id), eq(sessions.ownerId, userId)))
+        .returning({ id: sessions.id });
+      if (!updated.length) throw new Error("Session not found.");
       await tx
         .delete(failurePatterns)
         .where(eq(failurePatterns.sessionId, id));
@@ -127,8 +135,11 @@ export async function updateSession(
 export async function deleteSession(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
   try {
-    await db.delete(sessions).where(eq(sessions.id, id));
+    await db
+      .delete(sessions)
+      .where(and(eq(sessions.id, id), eq(sessions.ownerId, userId)));
     revalidateAll();
     return ok({ id });
   } catch (e) {

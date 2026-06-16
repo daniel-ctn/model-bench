@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { projects } from "@/db/schema";
 import { slugExists } from "@/db/queries";
+import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
 import { slugify } from "@/lib/format";
 import { textOrNull } from "@/lib/normalize";
@@ -36,11 +37,13 @@ export async function createProject(
   const parsed = projectFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
   const v = parsed.data;
+  const userId = await requireUserId();
   try {
     const slug = await uniqueSlug(v.slug ? slugify(v.slug) : slugify(v.name));
     const [row] = await db
       .insert(projects)
       .values({
+        ownerId: userId,
         name: v.name.trim(),
         slug,
         description: textOrNull(v.description),
@@ -63,6 +66,7 @@ export async function updateProject(
   const parsed = projectFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
   const v = parsed.data;
+  const userId = await requireUserId();
   try {
     const slug = await uniqueSlug(
       v.slug ? slugify(v.slug) : slugify(v.name),
@@ -78,7 +82,7 @@ export async function updateProject(
         status: v.status,
         color: v.color,
       })
-      .where(eq(projects.id, id));
+      .where(and(eq(projects.id, id), eq(projects.ownerId, userId)));
     revalidate();
     revalidatePath(`/projects/${id}`);
     return ok({ id });
@@ -90,8 +94,11 @@ export async function updateProject(
 export async function deleteProject(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
   try {
-    await db.delete(projects).where(eq(projects.id, id));
+    await db
+      .delete(projects)
+      .where(and(eq(projects.id, id), eq(projects.ownerId, userId)));
     revalidate();
     return ok({ id });
   } catch (e) {

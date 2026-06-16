@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { models } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
 import { textOrNull } from "@/lib/normalize";
 import { modelFormSchema, type ModelFormValues } from "@/lib/validations";
@@ -38,10 +39,11 @@ export async function createModel(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = modelFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
+  const userId = await requireUserId();
   try {
     const [row] = await db
       .insert(models)
-      .values(toRow(parsed.data))
+      .values({ ...toRow(parsed.data), ownerId: userId })
       .returning({ id: models.id });
     revalidate();
     return ok({ id: row.id });
@@ -56,8 +58,12 @@ export async function updateModel(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = modelFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
+  const userId = await requireUserId();
   try {
-    await db.update(models).set(toRow(parsed.data)).where(eq(models.id, id));
+    await db
+      .update(models)
+      .set(toRow(parsed.data))
+      .where(and(eq(models.id, id), eq(models.ownerId, userId)));
     revalidate();
     revalidatePath(`/models/${id}`);
     return ok({ id });
@@ -69,8 +75,11 @@ export async function updateModel(
 export async function deleteModel(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
   try {
-    await db.delete(models).where(eq(models.id, id));
+    await db
+      .delete(models)
+      .where(and(eq(models.id, id), eq(models.ownerId, userId)));
     revalidate();
     return ok({ id });
   } catch (e) {

@@ -1,3 +1,5 @@
+import { eq, inArray } from "drizzle-orm";
+
 import { db } from "@/db";
 import {
   aiTools,
@@ -7,18 +9,28 @@ import {
   projects,
   sessions,
 } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const [p, t, m, s, fp, ins] = await Promise.all([
-    db.select().from(projects),
-    db.select().from(aiTools),
-    db.select().from(models),
-    db.select().from(sessions),
-    db.select().from(failurePatterns),
-    db.select().from(insights),
+  const userId = await requireUserId();
+
+  const [p, t, m, s, ins] = await Promise.all([
+    db.select().from(projects).where(eq(projects.ownerId, userId)),
+    db.select().from(aiTools).where(eq(aiTools.ownerId, userId)),
+    db.select().from(models).where(eq(models.ownerId, userId)),
+    db.select().from(sessions).where(eq(sessions.ownerId, userId)),
+    db.select().from(insights).where(eq(insights.ownerId, userId)),
   ]);
+
+  const sessionIds = s.map((row) => row.id);
+  const fp = sessionIds.length
+    ? await db
+        .select()
+        .from(failurePatterns)
+        .where(inArray(failurePatterns.sessionId, sessionIds))
+    : [];
 
   const payload = {
     version: 1,

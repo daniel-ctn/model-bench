@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { aiTools } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
 import { textOrNull } from "@/lib/normalize";
 import { toolFormSchema, type ToolFormValues } from "@/lib/validations";
@@ -31,10 +32,11 @@ export async function createTool(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = toolFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
+  const userId = await requireUserId();
   try {
     const [row] = await db
       .insert(aiTools)
-      .values(toRow(parsed.data))
+      .values({ ...toRow(parsed.data), ownerId: userId })
       .returning({ id: aiTools.id });
     revalidate();
     return ok({ id: row.id });
@@ -49,8 +51,12 @@ export async function updateTool(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = toolFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
+  const userId = await requireUserId();
   try {
-    await db.update(aiTools).set(toRow(parsed.data)).where(eq(aiTools.id, id));
+    await db
+      .update(aiTools)
+      .set(toRow(parsed.data))
+      .where(and(eq(aiTools.id, id), eq(aiTools.ownerId, userId)));
     revalidate();
     revalidatePath(`/tools/${id}`);
     return ok({ id });
@@ -62,8 +68,11 @@ export async function updateTool(
 export async function deleteTool(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
   try {
-    await db.delete(aiTools).where(eq(aiTools.id, id));
+    await db
+      .delete(aiTools)
+      .where(and(eq(aiTools.id, id), eq(aiTools.ownerId, userId)));
     revalidate();
     return ok({ id });
   } catch (e) {

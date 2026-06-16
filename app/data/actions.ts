@@ -26,6 +26,7 @@ import {
   TOOL_CATEGORIES,
   WORKFLOW_TYPES,
 } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, type ActionResult } from "@/lib/action-result";
 
 const date = z.coerce.date().optional();
@@ -173,24 +174,36 @@ export async function importBackup(
     return fail("This doesn't look like a ModelBench backup file.");
   }
   const data = parsed.data;
+  const userId = await requireUserId();
+  const owned = <T extends object>(rows: T[]) =>
+    rows.map((r) => ({ ...r, ownerId: userId }));
 
   try {
     await db.transaction(async (tx) => {
       if (data.projects.length)
-        await tx.insert(projects).values(data.projects).onConflictDoNothing();
+        await tx
+          .insert(projects)
+          .values(owned(data.projects))
+          .onConflictDoNothing();
       if (data.tools.length)
-        await tx.insert(aiTools).values(data.tools).onConflictDoNothing();
+        await tx.insert(aiTools).values(owned(data.tools)).onConflictDoNothing();
       if (data.models.length)
-        await tx.insert(models).values(data.models).onConflictDoNothing();
+        await tx.insert(models).values(owned(data.models)).onConflictDoNothing();
       if (data.sessions.length)
-        await tx.insert(sessions).values(data.sessions).onConflictDoNothing();
+        await tx
+          .insert(sessions)
+          .values(owned(data.sessions))
+          .onConflictDoNothing();
       if (data.failurePatterns.length)
         await tx
           .insert(failurePatterns)
           .values(data.failurePatterns)
           .onConflictDoNothing();
       if (data.insights.length)
-        await tx.insert(insights).values(data.insights).onConflictDoNothing();
+        await tx
+          .insert(insights)
+          .values(owned(data.insights))
+          .onConflictDoNothing();
     });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Import failed.");

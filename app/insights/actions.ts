@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { insights } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
 import { idOrNull, textOrNull } from "@/lib/normalize";
 import { insightFormSchema, type InsightFormValues } from "@/lib/validations";
@@ -35,10 +36,11 @@ export async function createInsight(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = insightFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
+  const userId = await requireUserId();
   try {
     const [row] = await db
       .insert(insights)
-      .values(toRow(parsed.data))
+      .values({ ...toRow(parsed.data), ownerId: userId })
       .returning({ id: insights.id });
     revalidate();
     return ok({ id: row.id });
@@ -53,8 +55,12 @@ export async function updateInsight(
 ): Promise<ActionResult<{ id: string }>> {
   const parsed = insightFormSchema.safeParse(values);
   if (!parsed.success) return fromZodError(parsed.error);
+  const userId = await requireUserId();
   try {
-    await db.update(insights).set(toRow(parsed.data)).where(eq(insights.id, id));
+    await db
+      .update(insights)
+      .set(toRow(parsed.data))
+      .where(and(eq(insights.id, id), eq(insights.ownerId, userId)));
     revalidate();
     revalidatePath(`/insights/${id}`);
     return ok({ id });
@@ -66,8 +72,11 @@ export async function updateInsight(
 export async function deleteInsight(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
   try {
-    await db.delete(insights).where(eq(insights.id, id));
+    await db
+      .delete(insights)
+      .where(and(eq(insights.id, id), eq(insights.ownerId, userId)));
     revalidate();
     return ok({ id });
   } catch (e) {

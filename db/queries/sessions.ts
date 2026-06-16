@@ -4,6 +4,7 @@ import { and, eq, gte, lte, type SQL } from "drizzle-orm";
 
 import { db } from "@/db";
 import { sessions } from "@/db/schema";
+import { requireUserId } from "@/lib/auth-helpers";
 import type { ResultStatus, SessionWithRelations, TaskType } from "@/types";
 
 const withRelations = {
@@ -45,14 +46,15 @@ function matchesSearch(s: SessionWithRelations, query: string): boolean {
 }
 
 /**
- * Fetch sessions with all relations. Equality + date + quality filters run in
- * SQL; free-text search, tag matching and "has failure" run in memory (the
- * dataset is personal-scale and this keeps the search logic uniform).
+ * Fetch the current user's sessions with all relations. Equality + date +
+ * quality filters run in SQL; free-text search, tag matching and "has failure"
+ * run in memory.
  */
 export async function listSessions(
   filters: SessionFilters = {},
 ): Promise<SessionWithRelations[]> {
-  const conditions: SQL[] = [];
+  const userId = await requireUserId();
+  const conditions: SQL[] = [eq(sessions.ownerId, userId)];
   if (filters.projectId) conditions.push(eq(sessions.projectId, filters.projectId));
   if (filters.toolId) conditions.push(eq(sessions.toolId, filters.toolId));
   if (filters.modelId) conditions.push(eq(sessions.modelId, filters.modelId));
@@ -65,7 +67,7 @@ export async function listSessions(
     conditions.push(gte(sessions.qualityScore, filters.minQuality));
 
   const rows = (await db.query.sessions.findMany({
-    where: conditions.length ? and(...conditions) : undefined,
+    where: and(...conditions),
     with: withRelations,
     orderBy: (s, { desc }) => [desc(s.date), desc(s.createdAt)],
   })) as SessionWithRelations[];
@@ -86,8 +88,9 @@ export async function listSessions(
 export async function getSessionById(
   id: string,
 ): Promise<SessionWithRelations | null> {
+  const userId = await requireUserId();
   const row = await db.query.sessions.findFirst({
-    where: eq(sessions.id, id),
+    where: and(eq(sessions.id, id), eq(sessions.ownerId, userId)),
     with: withRelations,
   });
   return (row as SessionWithRelations | undefined) ?? null;
@@ -96,7 +99,9 @@ export async function getSessionById(
 export async function getRecentSessions(
   limit = 8,
 ): Promise<SessionWithRelations[]> {
+  const userId = await requireUserId();
   const rows = (await db.query.sessions.findMany({
+    where: eq(sessions.ownerId, userId),
     with: withRelations,
     orderBy: (s, { desc }) => [desc(s.date), desc(s.createdAt)],
     limit,
