@@ -9,6 +9,7 @@ import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
 import { idOrNull, textOrNull } from "@/lib/normalize";
 import { insightFormSchema, type InsightFormValues } from "@/lib/validations";
+import type { ConfidenceLevel } from "@/types";
 
 function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : "An unexpected error occurred.";
@@ -41,6 +42,35 @@ export async function createInsight(
     const [row] = await db
       .insert(insights)
       .values({ ...toRow(parsed.data), ownerId: userId })
+      .returning({ id: insights.id });
+    revalidate();
+    return ok({ id: row.id });
+  } catch (e) {
+    return fail(errMessage(e));
+  }
+}
+
+/** Promote a computed signal into a durable, saved insight. */
+export async function createInsightFromSignal(input: {
+  title: string;
+  description: string;
+  relatedModelId?: string | null;
+  relatedToolId?: string | null;
+  confidence: ConfidenceLevel;
+}): Promise<ActionResult<{ id: string }>> {
+  const userId = await requireUserId();
+  try {
+    const [row] = await db
+      .insert(insights)
+      .values({
+        ownerId: userId,
+        title: input.title.trim().slice(0, 200),
+        description: textOrNull(input.description),
+        relatedModelId: idOrNull(input.relatedModelId),
+        relatedToolId: idOrNull(input.relatedToolId),
+        confidence: input.confidence,
+        status: "active",
+      })
       .returning({ id: insights.id });
     revalidate();
     return ok({ id: row.id });

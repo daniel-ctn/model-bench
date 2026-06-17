@@ -46,10 +46,20 @@ import {
   topFailurePattern,
   trendByDay,
 } from "@/lib/metrics";
+import { computeSignals } from "@/lib/metrics/signals";
 import { cn } from "@/lib/utils";
-import type { SessionWithRelations } from "@/types";
+import type { SessionWithRelations, Tone } from "@/types";
 
 export const dynamic = "force-dynamic";
+
+const signalDotClass: Record<Tone, string> = {
+  primary: "bg-primary",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-destructive",
+  info: "bg-info",
+  neutral: "bg-muted-foreground",
+};
 
 function pctChange(curr: number, prev: number): number | null {
   if (!prev) return null;
@@ -147,6 +157,9 @@ export default async function DashboardPage() {
         b.stats.count - a.stats.count,
     )
     .slice(0, 5);
+
+  // Computed signals worth a glance (top few).
+  const signals = computeSignals(sessions).slice(0, 5);
 
   // Sessions to review — lowest reliability / problematic first
   const toReview = [...sessions]
@@ -301,6 +314,55 @@ export default async function DashboardPage() {
           <CostValueScatter data={scatterData} />
         </SectionCard>
       </div>
+
+      {/* Signals */}
+      {signals.length > 0 ? (
+        <div className="mt-4">
+          <SectionCard
+            title="Signals"
+            description="Patterns ModelBench spotted in your data."
+            action={
+              <Button variant="ghost" size="sm" render={<Link href="/insights" />}>
+                Review
+                <ArrowRight />
+              </Button>
+            }
+            contentClassName="p-0"
+          >
+            <ul className="divide-border/60 divide-y">
+              {signals.map((sig) => {
+                const href = sig.entity
+                  ? `/models/${sig.entity.id}`
+                  : "/recommend";
+                return (
+                  <li key={sig.id}>
+                    <Link
+                      href={href}
+                      className="hover:bg-accent/40 flex items-center gap-3 px-6 py-3 transition-colors"
+                    >
+                      <span
+                        className={cn(
+                          "mt-1.5 size-2 shrink-0 self-start rounded-full",
+                          signalDotClass[sig.tone],
+                        )}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">
+                          {sig.title}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {sig.detail}
+                        </span>
+                      </span>
+                      <ArrowRight className="text-muted-foreground/50 size-4 shrink-0" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </SectionCard>
+        </div>
+      ) : null}
 
       {/* Lists row */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">

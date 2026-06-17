@@ -5,12 +5,14 @@ import { ConfidenceBadge, InsightStatusBadge } from "@/components/badges";
 import { EmptyState } from "@/components/empty-state";
 import { SortSelect } from "@/components/filters/sort-select";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
+import { SignalSuggestions } from "@/components/insights/signal-suggestions";
 import { RowActions } from "@/components/tables/row-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { deleteInsight } from "@/app/insights/actions";
-import { listInsights } from "@/db/queries";
+import { listInsights, listSessions } from "@/db/queries";
 import { formatRelative } from "@/lib/format";
+import { computeSignals } from "@/lib/metrics/signals";
 import { cn } from "@/lib/utils";
 import { INSIGHT_STATUSES } from "@/db/schema";
 import type { InsightStatus } from "@/types";
@@ -58,8 +60,20 @@ export default async function InsightsPage({
   )
     ? (status as InsightStatus)
     : undefined;
-  const insights = await listInsights(
-    validStatus ? { status: validStatus } : {},
+  const [allInsights, sessions] = await Promise.all([
+    listInsights({}),
+    listSessions(),
+  ]);
+  const insights = validStatus
+    ? allInsights.filter((i) => i.status === validStatus)
+    : allInsights;
+
+  // Computed signals, minus any already captured as an insight.
+  const existingTitles = new Set(
+    allInsights.map((i) => i.title.trim().toLowerCase()),
+  );
+  const signals = computeSignals(sessions).filter(
+    (s) => !existingTitles.has(s.title.trim().toLowerCase()),
   );
 
   return (
@@ -74,6 +88,8 @@ export default async function InsightsPage({
           New insight
         </Button>
       </PageHeader>
+
+      {signals.length > 0 ? <SignalSuggestions signals={signals} /> : null}
 
       {insights.length === 0 ? (
         <EmptyState
