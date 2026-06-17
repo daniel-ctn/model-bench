@@ -1070,6 +1070,12 @@ async function main() {
   await db.update(sessions).set({ ownerId }).where(isNull(sessions.ownerId));
   await db.update(insights).set({ ownerId }).where(isNull(insights.ownerId));
 
+  // Give the demo a monthly budget so the budget alert & Cost tab have data.
+  await db
+    .update(user)
+    .set({ monthlyBudgetUsd: 60 })
+    .where(eq(user.id, ownerId));
+
   console.log("Seed complete ✓");
 }
 
