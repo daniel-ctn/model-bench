@@ -6,6 +6,14 @@ import { db } from "@/db";
 import { account, session, user, verification } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
 
+// In production a real secret is mandatory — the fallback would let anyone
+// forge session cookies. In dev we keep a convenience fallback.
+if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
+  throw new Error(
+    "BETTER_AUTH_SECRET must be set in production (cookies are signed with it).",
+  );
+}
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET ?? "dev-insecure-secret-change-me",
