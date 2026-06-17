@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { ScoreBadge } from "@/components/badges";
+import { ConfidenceDot, ScoreBadge } from "@/components/badges";
 import {
   Table,
   TableBody,
@@ -64,10 +64,23 @@ export function StatsLeaderboard({
                 )}
               </TableCell>
               <TableCell className="tabnum text-right">
-                {r.stats.count}
+                <span className="inline-flex items-center justify-end gap-1.5">
+                  <ConfidenceDot
+                    value={r.stats.confidence}
+                    count={r.stats.count}
+                  />
+                  {r.stats.count}
+                </span>
               </TableCell>
               <TableCell className="text-center">
-                <ScoreBadge value={r.stats.avgQuality} />
+                <span className="inline-flex flex-col items-center">
+                  <ScoreBadge value={r.stats.avgQuality} />
+                  {r.stats.qualityStdev != null ? (
+                    <span className="text-muted-foreground tabnum mt-0.5 text-[10px]">
+                      ±{formatScore(r.stats.qualityStdev)}
+                    </span>
+                  ) : null}
+                </span>
               </TableCell>
               <TableCell className="tabnum text-right">
                 {formatScore(r.stats.avgReliability)}

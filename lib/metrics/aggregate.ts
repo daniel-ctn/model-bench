@@ -1,4 +1,9 @@
-import type { FailureType, SessionWithRelations, TaskType } from "@/types";
+import type {
+  ConfidenceLevel,
+  FailureType,
+  SessionWithRelations,
+  TaskType,
+} from "@/types";
 import {
   costValueIndex,
   netTimeSaved,
@@ -25,6 +30,38 @@ export function round(n: number | null, digits = 1): number | null {
   return Math.round(n * f) / f;
 }
 
+/** Sample standard deviation. Null below two samples (spread undefined). */
+export function stdev(values: (number | null | undefined)[]): number | null {
+  const nums = values.filter((v): v is number => typeof v === "number");
+  if (nums.length < 2) return null;
+  const m = nums.reduce((a, b) => a + b, 0) / nums.length;
+  const variance =
+    nums.reduce((a, v) => a + (v - m) ** 2, 0) / (nums.length - 1);
+  return Math.sqrt(variance);
+}
+
+/**
+ * Wilson score lower bound for a proportion — a sample-size-aware floor on a
+ * success rate. Small samples are pulled toward 0, so a 1/1 model can't
+ * outrank a 18/20 one. z = 1.96 (~95% one-sided ≈ 97.5%).
+ */
+export function wilsonLowerBound(successes: number, n: number, z = 1.96): number {
+  if (n <= 0) return 0;
+  const phat = successes / n;
+  const z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = phat + z2 / (2 * n);
+  const margin = z * Math.sqrt((phat * (1 - phat) + z2 / (4 * n)) / n);
+  return Math.max(0, (center - margin) / denom);
+}
+
+/** How much to trust a per-group average, purely from its sample size. */
+export function confidenceFromCount(n: number): ConfidenceLevel {
+  if (n >= 8) return "high";
+  if (n >= 4) return "medium";
+  return "low";
+}
+
 function emptyWorthItCounts(): Record<WorthItVerdict, number> {
   return { "worth-it": 0, "good-enough": 0, "too-expensive": 0, avoid: 0 };
 }
@@ -43,6 +80,12 @@ export type GroupStats = {
   failureCount: number;
   /** Share of sessions rated excellent or good (0–1). */
   successRate: number;
+  /** Sample-size-aware floor on the success rate (Wilson lower bound). */
+  successRateLower: number;
+  /** Spread of quality scores — null below two sessions. */
+  qualityStdev: number | null;
+  /** How much to trust these averages, from the sample size alone. */
+  confidence: ConfidenceLevel;
   worthItCounts: Record<WorthItVerdict, number>;
 };
 
@@ -57,8 +100,9 @@ export function computeStats(sessions: SessionWithRelations[]): GroupStats {
     if (s.resultStatus === "excellent" || s.resultStatus === "good") successes += 1;
   }
 
+  const count = sessions.length;
   return {
-    count: sessions.length,
+    count,
     avgQuality: mean(sessions.map((s) => s.qualityScore)),
     avgReliability: mean(sessions.map((s) => reliabilityIndex(s))),
     avgCostValue: mean(sessions.map((s) => costValueIndex(s))),
@@ -67,7 +111,10 @@ export function computeStats(sessions: SessionWithRelations[]): GroupStats {
     totalTimeSpentMinutes: sum(sessions.map((s) => s.timeSpentMinutes)),
     totalCost: sum(sessions.map((s) => s.estimatedCostUsd)),
     failureCount,
-    successRate: sessions.length ? successes / sessions.length : 0,
+    successRate: count ? successes / count : 0,
+    successRateLower: wilsonLowerBound(successes, count),
+    qualityStdev: stdev(sessions.map((s) => s.qualityScore)),
+    confidence: confidenceFromCount(count),
     worthItCounts,
   };
 }

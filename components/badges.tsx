@@ -89,6 +89,42 @@ export function ConfidenceBadge({ value }: { value: ConfidenceLevel }) {
   );
 }
 
+const confidenceDotColor: Record<ConfidenceLevel, string> = {
+  low: "bg-muted-foreground/50",
+  medium: "bg-info",
+  high: "bg-success",
+};
+
+/**
+ * A tiny dot signalling how much to trust a group's averages, based on its
+ * sample size. Carries an accessible title with the reason.
+ */
+export function ConfidenceDot({
+  value,
+  count,
+  className,
+}: {
+  value: ConfidenceLevel;
+  count?: number;
+  className?: string;
+}) {
+  const title =
+    count == null
+      ? `${confidenceLabels[value]} confidence`
+      : `${confidenceLabels[value]} confidence · ${count} session${count === 1 ? "" : "s"}`;
+  return (
+    <span
+      className={cn(
+        "inline-block size-1.5 shrink-0 rounded-full",
+        confidenceDotColor[value],
+        className,
+      )}
+      title={title}
+      aria-label={title}
+    />
+  );
+}
+
 export function InsightStatusBadge({ value }: { value: InsightStatus }) {
   return (
     <ToneBadge tone={insightStatusTone[value]} dot>
