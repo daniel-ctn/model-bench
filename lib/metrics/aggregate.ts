@@ -309,10 +309,15 @@ export type SpendPoint = {
   count: number;
 };
 
-/** Total estimated cost grouped by calendar month, ascending, last N months. */
+/**
+ * Total estimated cost per calendar month for the trailing `months` months
+ * ending at `now`, ascending. Emits a continuous run including zero-spend
+ * months so charts have no gaps and monthly averages divide by real months.
+ */
 export function spendByMonth(
   sessions: SessionWithRelations[],
   months = 6,
+  now: Date = new Date(),
 ): SpendPoint[] {
   const buckets = new Map<string, { cost: number; count: number }>();
   for (const s of sessions) {
@@ -327,10 +332,14 @@ export function spendByMonth(
       buckets.set(key, { cost, count: 1 });
     }
   }
-  return [...buckets.entries()]
-    .map(([month, b]) => ({ month, cost: round(b.cost, 2) ?? 0, count: b.count }))
-    .sort((a, b) => a.month.localeCompare(b.month))
-    .slice(-months);
+  const out: SpendPoint[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.get(key);
+    out.push({ month: key, cost: round(b?.cost ?? 0, 2) ?? 0, count: b?.count ?? 0 });
+  }
+  return out;
 }
 
 /* --------------------------- failure analytics ---------------------------- */
