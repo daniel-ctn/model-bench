@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { db } from "@/db";
@@ -182,6 +183,9 @@ export async function importBackup(
 
   try {
     await db.transaction(async (tx) => {
+      // Insert the entities first, then resolve relation references only
+      // against rows this user actually owns — so a crafted backup can't point
+      // sessions/insights/failures at another user's records.
       if (data.projects.length)
         await tx
           .insert(projects)
@@ -191,21 +195,55 @@ export async function importBackup(
         await tx.insert(aiTools).values(owned(data.tools)).onConflictDoNothing();
       if (data.models.length)
         await tx.insert(models).values(owned(data.models)).onConflictDoNothing();
+
+      const [ownProjects, ownTools, ownModels] = await Promise.all([
+        tx.select({ id: projects.id }).from(projects).where(eq(projects.ownerId, userId)),
+        tx.select({ id: aiTools.id }).from(aiTools).where(eq(aiTools.ownerId, userId)),
+        tx.select({ id: models.id }).from(models).where(eq(models.ownerId, userId)),
+      ]);
+      const projectIds = new Set(ownProjects.map((r) => r.id));
+      const toolIds = new Set(ownTools.map((r) => r.id));
+      const modelIds = new Set(ownModels.map((r) => r.id));
+      const keep = (id: string | null | undefined, set: Set<string>) =>
+        id && set.has(id) ? id : null;
+
       if (data.sessions.length)
         await tx
           .insert(sessions)
-          .values(owned(data.sessions))
-          .onConflictDoNothing();
-      if (data.failurePatterns.length)
-        await tx
-          .insert(failurePatterns)
-          .values(data.failurePatterns)
+          .values(
+            owned(data.sessions).map((s) => ({
+              ...s,
+              projectId: keep(s.projectId, projectIds),
+              toolId: keep(s.toolId, toolIds),
+              modelId: keep(s.modelId, modelIds),
+              followupModelId: keep(s.followupModelId, modelIds),
+            })),
+          )
           .onConflictDoNothing();
       if (data.insights.length)
         await tx
           .insert(insights)
-          .values(owned(data.insights))
+          .values(
+            owned(data.insights).map((i) => ({
+              ...i,
+              relatedProjectId: keep(i.relatedProjectId, projectIds),
+              relatedToolId: keep(i.relatedToolId, toolIds),
+              relatedModelId: keep(i.relatedModelId, modelIds),
+            })),
+          )
           .onConflictDoNothing();
+      if (data.failurePatterns.length) {
+        const ownSessions = await tx
+          .select({ id: sessions.id })
+          .from(sessions)
+          .where(eq(sessions.ownerId, userId));
+        const sessionIds = new Set(ownSessions.map((r) => r.id));
+        const rows = data.failurePatterns.filter((fp) =>
+          sessionIds.has(fp.sessionId),
+        );
+        if (rows.length)
+          await tx.insert(failurePatterns).values(rows).onConflictDoNothing();
+      }
     });
   } catch (e) {
     return fail(e instanceof Error ? e.message : "Import failed.");
