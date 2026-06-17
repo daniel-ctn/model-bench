@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { endOfMonth, startOfMonth, subMonths } from "date-fns";
+import { endOfMonth, startOfMonth } from "date-fns";
 import {
   ArrowRight,
   Boxes,
@@ -21,6 +21,7 @@ import { CostValueScatter } from "@/components/charts/cost-value-scatter";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { ScoreTrendChart } from "@/components/charts/score-trend-chart";
 import { TimeBalanceChart } from "@/components/charts/time-balance-chart";
+import { DateRangeControl } from "@/components/filters/date-range-control";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
 import { SectionCard } from "@/components/section-card";
@@ -47,8 +48,9 @@ import {
   trendByDay,
 } from "@/lib/metrics";
 import { computeSignals } from "@/lib/metrics/signals";
+import { inWindow, resolveRange } from "@/lib/date-range";
 import { cn } from "@/lib/utils";
-import type { SessionWithRelations, Tone } from "@/types";
+import type { Tone } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +68,13 @@ function pctChange(curr: number, prev: number): number | null {
   return ((curr - prev) / prev) * 100;
 }
 
-export default async function DashboardPage() {
-  const [sessions, budget] = await Promise.all([
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const [{ range: rangeParam }, sessions, budget] = await Promise.all([
+    searchParams,
     listSessions(),
     getMonthlyBudget(),
   ]);
@@ -99,23 +106,25 @@ export default async function DashboardPage() {
   }
 
   const now = new Date();
+  const range = resolveRange(rangeParam, now);
+
+  const windowSessions = inWindow(sessions, range.from, range.to);
+  const prevSessions =
+    range.prevFrom && range.prevTo
+      ? inWindow(sessions, range.prevFrom, range.prevTo)
+      : [];
+
+  const kpis = summarize(windowSessions);
+  const prev = summarize(prevSessions);
+  const deltaHint = range.prevFrom ? "vs previous period" : range.label;
+
+  // Budget tracking — always against the current calendar month.
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
-  const lastMonthStart = startOfMonth(subMonths(now, 1));
-  const lastMonthEnd = endOfMonth(subMonths(now, 1));
-
-  const inRange = (s: SessionWithRelations, a: Date, b: Date) =>
-    s.date >= a && s.date <= b;
-  const monthSessions = sessions.filter((s) => inRange(s, monthStart, monthEnd));
-  const lastMonthSessions = sessions.filter((s) =>
-    inRange(s, lastMonthStart, lastMonthEnd),
+  const monthSpend = inWindow(sessions, monthStart, monthEnd).reduce(
+    (a, s) => a + (s.estimatedCostUsd ?? 0),
+    0,
   );
-
-  const kpis = summarize(monthSessions);
-  const prev = summarize(lastMonthSessions);
-
-  // Budget tracking
-  const monthSpend = kpis.totalCost;
   const dayOfMonth = now.getDate();
   const daysInMonth = monthEnd.getDate();
   const projectedSpend =
@@ -137,8 +146,8 @@ export default async function DashboardPage() {
     (t) => failureTypeLabels[t],
   );
 
-  // Charts
-  const trend = trendByDay(sessions).slice(-24);
+  // Charts (scoped to the selected range)
+  const trend = trendByDay(windowSessions).slice(-24);
   const trendData = trend.map((p) => ({
     date: p.date,
     label: formatDate(p.date, "MMM d"),
@@ -151,8 +160,8 @@ export default async function DashboardPage() {
     saved: Math.round((p.totalTimeSavedMinutes / 60) * 10) / 10,
     spent: Math.round((p.totalTimeSpentMinutes / 60) * 10) / 10,
   }));
-  const toolUsage = distribution(sessions, byTool).slice(0, 6);
-  const scatterData = sessions
+  const toolUsage = distribution(windowSessions, byTool).slice(0, 6);
+  const scatterData = windowSessions
     .filter((s) => s.estimatedCostUsd != null && s.estimatedCostUsd > 0)
     .map((s) => ({
       cost: s.estimatedCostUsd as number,
@@ -162,8 +171,8 @@ export default async function DashboardPage() {
     }))
     .slice(0, 80);
 
-  // Top models this month
-  const topModels = leaderboard(monthSessions, byModel)
+  // Top models in the selected range
+  const topModels = leaderboard(windowSessions, byModel)
     .sort(
       (a, b) =>
         (b.stats.avgQuality ?? 0) - (a.stats.avgQuality ?? 0) ||
@@ -192,7 +201,9 @@ export default async function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description={`Tracking ${sessions.length} session${sessions.length === 1 ? "" : "s"} across your AI workflow.`}
-      />
+      >
+        <DateRangeControl />
+      </PageHeader>
 
       {overBudget || projectedOver ? (
         <Link
@@ -232,7 +243,7 @@ export default async function DashboardPage() {
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Sessions this month"
+          label="Sessions"
           value={kpis.count}
           icon={NotebookPen}
           delta={
@@ -240,7 +251,7 @@ export default async function DashboardPage() {
               ? { value: pctChange(kpis.count, prev.count) ?? 0 }
               : null
           }
-          hint="vs last month"
+          hint={deltaHint}
         />
         <StatCard
           label="Net time saved"
@@ -257,7 +268,7 @@ export default async function DashboardPage() {
                 }
               : null
           }
-          hint="this month"
+          hint={deltaHint}
         />
         <StatCard
           label="Estimated cost"
@@ -271,7 +282,7 @@ export default async function DashboardPage() {
                 }
               : null
           }
-          hint="this month"
+          hint={deltaHint}
         />
         <StatCard
           label="Avg quality"
@@ -289,7 +300,7 @@ export default async function DashboardPage() {
               ? { value: pctChange(kpis.avgQuality, prev.avgQuality) ?? 0 }
               : null
           }
-          hint="this month"
+          hint={deltaHint}
         />
       </div>
 
@@ -415,8 +426,8 @@ export default async function DashboardPage() {
       {/* Lists row */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard
-          title="Top models this month"
-          description="Ranked by average quality."
+          title="Top models"
+          description={`Ranked by average quality · ${range.label.toLowerCase()}.`}
           action={
             <Button
               variant="ghost"
@@ -431,7 +442,7 @@ export default async function DashboardPage() {
         >
           {topModels.length === 0 ? (
             <p className="text-muted-foreground px-6 pb-6 text-sm">
-              No model-tagged sessions this month.
+              No model-tagged sessions in this period.
             </p>
           ) : (
             <ul className="divide-border/60 divide-y">

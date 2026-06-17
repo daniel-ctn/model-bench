@@ -10,6 +10,7 @@ import { BarChart3, DollarSign, TrendingUp, Wallet } from "lucide-react";
 import { ScoreBadge } from "@/components/badges";
 import { FailureHeatmap } from "@/components/charts/failure-heatmap";
 import { SpendTrendChart } from "@/components/charts/spend-trend-chart";
+import { DateRangeControl } from "@/components/filters/date-range-control";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
 import { BreakEvenCalculator } from "@/components/reports/break-even-calculator";
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMonthlyBudget, listSessions } from "@/db/queries";
+import { inWindow, resolveRange } from "@/lib/date-range";
 import { taskTypeLabels } from "@/lib/constants";
 import {
   formatCurrency,
@@ -80,8 +82,13 @@ function worthItVerdict(delta: number): { label: string; tone: Tone } {
   return { label: "Roughly equal — save money", tone: "neutral" };
 }
 
-export default async function ReportsPage() {
-  const [sessions, budget] = await Promise.all([
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const [{ range: rangeParam }, sessions, budget] = await Promise.all([
+    searchParams,
     listSessions(),
     getMonthlyBudget(),
   ]);
@@ -104,6 +111,11 @@ export default async function ReportsPage() {
   const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
   const monthStart = startOfMonth(now);
 
+  // Weekly review is intrinsically weekly; the other analytical tabs follow the
+  // selected range.
+  const range = resolveRange(rangeParam, now);
+  const rangeSessions = inWindow(sessions, range.from, range.to);
+
   const thisWeek = sessions.filter((s) => s.date >= weekStart);
   const lastWeek = sessions.filter(
     (s) => s.date >= lastWeekStart && s.date < weekStart,
@@ -117,24 +129,26 @@ export default async function ReportsPage() {
     .sort((a, b) => netTimeSaved(b) - netTimeSaved(a))
     .slice(0, 5);
 
-  const monthlyModels = sortLeaderboard(
-    leaderboard(monthSessions, byModel),
+  const qualityBoard = sortLeaderboard(
+    leaderboard(rangeSessions, byModel),
     "quality",
   );
   const costValueBoard = sortLeaderboard(
-    leaderboard(sessions, byModel),
+    leaderboard(rangeSessions, byModel),
     "costValue",
   );
   const reliabilityBoard = sortLeaderboard(
-    leaderboard(sessions, byModel),
+    leaderboard(rangeSessions, byModel),
     "reliability",
   );
 
-  const taskTypes = [...new Set(sessions.map((s) => s.taskType))] as TaskType[];
+  const taskTypes = [
+    ...new Set(rangeSessions.map((s) => s.taskType)),
+  ] as TaskType[];
 
   const bestByTask = taskTypes
     .map((tt) => {
-      const subset = sessions.filter((s) => s.taskType === tt);
+      const subset = rangeSessions.filter((s) => s.taskType === tt);
       const best = bestBy(leaderboard(subset, byModel), (st) => st.avgQuality, 1);
       return { taskType: tt, best, count: subset.length };
     })
@@ -145,7 +159,7 @@ export default async function ReportsPage() {
 
   const strongVsCheap = taskTypes
     .map((tt) => {
-      const subset = sessions.filter((s) => s.taskType === tt);
+      const subset = rangeSessions.filter((s) => s.taskType === tt);
       const strong = subset.filter((s) => strengthGroup(s) === "strong");
       const cheap = subset.filter((s) => strengthGroup(s) === "cheap");
       const strongAvg = mean(strong.map((s) => s.qualityScore));
@@ -162,7 +176,7 @@ export default async function ReportsPage() {
     .filter((r) => r.strongCount > 0 && r.cheapCount > 0 && r.delta != null)
     .sort((a, b) => (b.delta ?? 0) - (a.delta ?? 0));
 
-  const heatmap = failureHeatmap(sessions);
+  const heatmap = failureHeatmap(rangeSessions);
 
   // Cost & budget
   const monthSpend = monthSessions.reduce(
@@ -193,7 +207,9 @@ export default async function ReportsPage() {
       <PageHeader
         title="Reports"
         description="Weekly reviews, rankings and where the strong models earn their cost."
-      />
+      >
+        <DateRangeControl />
+      </PageHeader>
 
       <Tabs defaultValue="weekly">
         <TabsList className="mb-4 flex-wrap">
@@ -287,21 +303,23 @@ export default async function ReportsPage() {
         {/* Model rankings */}
         <TabsContent value="rankings" className="flex flex-col gap-4">
           <SectionCard
-            title="Monthly model ranking"
-            description="This month, by average quality."
+            title="Model ranking by quality"
+            description={`${range.label}, by average quality.`}
             contentClassName="p-0 pt-0"
           >
             <div className="px-4 pb-4">
-              {monthlyModels.length ? (
-                <StatsLeaderboard rows={monthlyModels} hrefBase="/models/" nameLabel="Model" rank />
+              {qualityBoard.length ? (
+                <StatsLeaderboard rows={qualityBoard} hrefBase="/models/" nameLabel="Model" rank />
               ) : (
-                <p className="text-muted-foreground text-sm">No sessions this month.</p>
+                <p className="text-muted-foreground text-sm">
+                  No model-tagged sessions in this period.
+                </p>
               )}
             </div>
           </SectionCard>
           <SectionCard
             title="Cost-value leaderboard"
-            description="Quality per dollar across all time."
+            description={`Quality per dollar · ${range.label.toLowerCase()}.`}
             contentClassName="p-0"
           >
             <div className="px-4 pb-4">
@@ -310,7 +328,7 @@ export default async function ReportsPage() {
           </SectionCard>
           <SectionCard
             title="Reliability leaderboard"
-            description="By reliability index across all time."
+            description={`By reliability index · ${range.label.toLowerCase()}.`}
             contentClassName="p-0"
           >
             <div className="px-4 pb-4">
