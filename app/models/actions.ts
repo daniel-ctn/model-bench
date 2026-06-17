@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { models } from "@/db/schema";
 import { requireUserId } from "@/lib/auth-helpers";
 import { ok, fail, fromZodError, type ActionResult } from "@/lib/action-result";
+import { MODEL_CATALOG } from "@/lib/model-catalog";
 import { textOrNull } from "@/lib/normalize";
 import { modelFormSchema, type ModelFormValues } from "@/lib/validations";
 
@@ -67,6 +68,49 @@ export async function updateModel(
     revalidate();
     revalidatePath(`/models/${id}`);
     return ok({ id });
+  } catch (e) {
+    return fail(errMessage(e));
+  }
+}
+
+/** Bulk-add current models from the built-in catalog, skipping ones you have. */
+export async function importCatalogModels(): Promise<
+  ActionResult<{ added: number }>
+> {
+  const userId = await requireUserId();
+  try {
+    const existing = await db
+      .select({ name: models.name, shortName: models.shortName })
+      .from(models)
+      .where(eq(models.ownerId, userId));
+    const have = new Set(
+      existing.flatMap((m) =>
+        [m.name, m.shortName].filter(Boolean).map((s) => s!.toLowerCase()),
+      ),
+    );
+    const toAdd = MODEL_CATALOG.filter(
+      (c) =>
+        !have.has(c.name.toLowerCase()) && !have.has(c.shortName.toLowerCase()),
+    );
+    if (toAdd.length) {
+      await db.insert(models).values(
+        toAdd.map((c) => ({
+          ownerId: userId,
+          provider: c.provider,
+          name: c.name,
+          shortName: c.shortName,
+          modelFamily: c.modelFamily,
+          strengthLevel: c.strengthLevel,
+          pricingInputPerMTok: c.pricingInputPerMTok,
+          pricingOutputPerMTok: c.pricingOutputPerMTok,
+          contextWindow: c.contextWindow,
+          knowledgeCutoff: c.knowledgeCutoff,
+          notes: "Added from catalog — verify pricing & context.",
+        })),
+      );
+    }
+    revalidate();
+    return ok({ added: toAdd.length });
   } catch (e) {
     return fail(errMessage(e));
   }

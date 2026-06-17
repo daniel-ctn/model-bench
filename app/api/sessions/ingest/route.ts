@@ -10,6 +10,7 @@ import {
   user,
 } from "@/db/schema";
 import { dateFromInput, textOrNull } from "@/lib/normalize";
+import { computeTokenCost } from "@/lib/pricing";
 import { ingestSchema } from "@/lib/validations/ingest";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +70,13 @@ export async function POST(request: Request) {
       .from(aiTools)
       .where(eq(aiTools.ownerId, owner.id)),
     db
-      .select({ id: models.id, name: models.name, shortName: models.shortName })
+      .select({
+        id: models.id,
+        name: models.name,
+        shortName: models.shortName,
+        pricingInputPerMTok: models.pricingInputPerMTok,
+        pricingOutputPerMTok: models.pricingOutputPerMTok,
+      })
       .from(models)
       .where(eq(models.ownerId, owner.id)),
     db
@@ -93,6 +100,13 @@ export async function POST(request: Request) {
     ? (projs.find((p) => norm(p.name) === norm(v.project!))?.id ?? null)
     : null;
 
+  // Cost: prefer the supplied estimate, else derive it from tokens × pricing.
+  const modelId = findModel(v.model);
+  const resolvedModel = mdls.find((m) => m.id === modelId) ?? null;
+  const estimatedCostUsd =
+    v.estimatedCostUsd ??
+    computeTokenCost(v.inputTokens, v.outputTokens, resolvedModel);
+
   try {
     const id = await db.transaction(async (tx) => {
       const [row] = await tx
@@ -104,7 +118,7 @@ export async function POST(request: Request) {
           date: parseDate(v.date),
           projectId,
           toolId,
-          modelId: findModel(v.model),
+          modelId,
           taskType: v.taskType,
           workflowType: v.workflowType,
           resultStatus: v.resultStatus,
@@ -119,7 +133,9 @@ export async function POST(request: Request) {
           notes: textOrNull(v.notes),
           timeSpentMinutes: v.timeSpentMinutes,
           estimatedTimeSavedMinutes: v.estimatedTimeSavedMinutes,
-          estimatedCostUsd: v.estimatedCostUsd ?? null,
+          estimatedCostUsd,
+          inputTokens: v.inputTokens ?? null,
+          outputTokens: v.outputTokens ?? null,
           testsRun: v.testsRun,
           testsPassed: v.testsRun ? (v.testsPassed ?? null) : null,
           causedRegression: v.causedRegression,

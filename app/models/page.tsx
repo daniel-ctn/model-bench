@@ -4,6 +4,7 @@ import { Boxes, GitCompareArrows, Plus } from "lucide-react";
 import { ModelStrengthBadge, ScoreBadge } from "@/components/badges";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
+import { ImportCatalogButton } from "@/components/models/import-catalog-button";
 import { RowActions } from "@/components/tables/row-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ export default async function ModelsPage() {
           <GitCompareArrows />
           Compare
         </Button>
+        <ImportCatalogButton />
         <Button render={<Link href="/models/new" />}>
           <Plus />
           New model
@@ -51,12 +53,15 @@ export default async function ModelsPage() {
         <EmptyState
           icon={Boxes}
           title="No models yet"
-          description="Add the models you use so sessions can be attributed and compared."
+          description="Add the models you use so sessions can be attributed and compared. Import the current catalog to get started fast."
         >
-          <Button render={<Link href="/models/new" />}>
-            <Plus />
-            Add a model
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <ImportCatalogButton />
+            <Button variant="outline" render={<Link href="/models/new" />}>
+              <Plus />
+              Add manually
+            </Button>
+          </div>
         </EmptyState>
       ) : (
         <div className="scrollbar-thin overflow-x-auto rounded-xl border">

@@ -51,6 +51,8 @@ export const ingestSchema = z.object({
     .catch(0)
     .default(0),
   estimatedCostUsd: z.coerce.number().min(0).nullish().catch(null),
+  inputTokens: z.coerce.number().int().min(0).nullish().catch(null),
+  outputTokens: z.coerce.number().int().min(0).nullish().catch(null),
 
   testsRun: z.coerce.boolean().catch(false).default(false),
   testsPassed: z.coerce.boolean().nullish().catch(null),

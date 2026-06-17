@@ -300,6 +300,9 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .default(0),
   estimatedCostUsd: doublePrecision("estimated_cost_usd"),
+  // Optional token counts — used to auto-compute cost from model pricing.
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
   quotaFeeling: quotaFeelingEnum("quota_feeling").notNull().default("unknown"),
   humanInterventionLevel: interventionEnum("human_intervention_level")
     .notNull()

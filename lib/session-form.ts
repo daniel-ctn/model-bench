@@ -19,6 +19,8 @@ export function sessionToFormValues(s: SessionWithRelations): SessionFormValues 
     timeSpentMinutes: s.timeSpentMinutes,
     estimatedTimeSavedMinutes: s.estimatedTimeSavedMinutes,
     estimatedCostUsd: s.estimatedCostUsd,
+    inputTokens: s.inputTokens,
+    outputTokens: s.outputTokens,
     quotaFeeling: s.quotaFeeling,
     humanInterventionLevel: s.humanInterventionLevel,
     testsRun: s.testsRun,

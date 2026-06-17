@@ -30,6 +30,8 @@ function toRow(v: SessionFormValues) {
     timeSpentMinutes: v.timeSpentMinutes,
     estimatedTimeSavedMinutes: v.estimatedTimeSavedMinutes,
     estimatedCostUsd: v.estimatedCostUsd,
+    inputTokens: v.inputTokens,
+    outputTokens: v.outputTokens,
     quotaFeeling: v.quotaFeeling,
     humanInterventionLevel: v.humanInterventionLevel,
     testsRun: v.testsRun,

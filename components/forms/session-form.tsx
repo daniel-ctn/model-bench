@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import {
   Bot,
+  Calculator,
   FlaskConical,
   Lightbulb,
   Palette,
@@ -32,8 +33,9 @@ import { FormBar, FormSection, useEntitySubmit } from "@/components/forms/form-u
 import { Button } from "@/components/ui/button";
 import { createSession, updateSession } from "@/app/sessions/actions";
 import type { FormLookups } from "@/db/queries/lookups";
-import { formatScore } from "@/lib/format";
+import { formatCurrency, formatScore } from "@/lib/format";
 import type { TaskHint } from "@/lib/metrics";
+import { computeTokenCost } from "@/lib/pricing";
 import { zodFormResolver } from "@/lib/resolver";
 import {
   interventionOptions,
@@ -94,6 +96,14 @@ export function SessionForm({
   const modelId = useWatch({ control, name: "modelId" });
   const hint = taskHints?.[taskType];
   const showHint = hint && hint.modelId !== modelId;
+
+  // Cost from tokens × the selected model's pricing.
+  const inputTokens = useWatch({ control, name: "inputTokens" });
+  const outputTokens = useWatch({ control, name: "outputTokens" });
+  const estimatedCostUsd = useWatch({ control, name: "estimatedCostUsd" });
+  const tokenModel = lookups.models.find((m) => m.id === modelId) ?? null;
+  const tokenCost = computeTokenCost(inputTokens, outputTokens, tokenModel);
+  const showTokenCost = tokenCost != null && tokenCost !== estimatedCostUsd;
 
   const projectOptions = [
     { value: "none", label: "No project" },
@@ -294,6 +304,42 @@ export function SessionForm({
             nullable
             placeholder="optional"
           />
+          <NumberField
+            name="inputTokens"
+            label="Input tokens"
+            suffix="tok"
+            min={0}
+            nullable
+            placeholder="optional"
+          />
+          <NumberField
+            name="outputTokens"
+            label="Output tokens"
+            suffix="tok"
+            min={0}
+            nullable
+            placeholder="optional"
+          />
+          {showTokenCost ? (
+            <div className="border-primary/30 bg-primary/5 text-foreground sm:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-2 text-sm">
+              <Calculator className="text-primary size-4 shrink-0" />
+              <span>
+                From tokens × {tokenModel?.shortName ?? tokenModel?.name} pricing
+                ≈ <span className="font-medium">{formatCurrency(tokenCost, { precise: true })}</span>.
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary h-auto px-2 py-0.5"
+                onClick={() =>
+                  setValue("estimatedCostUsd", tokenCost, { shouldDirty: true })
+                }
+              >
+                Use this cost
+              </Button>
+            </div>
+          ) : null}
         </FormSection>
 
         <FormSection

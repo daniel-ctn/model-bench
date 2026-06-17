@@ -38,6 +38,7 @@ import {
   formatMinutes,
   formatRelative,
   formatScore,
+  formatTokens,
 } from "@/lib/format";
 import {
   costValueIndex,
@@ -203,6 +204,12 @@ export default async function SessionDetailPage({
                 label="Est. cost"
                 value={formatCurrency(s.estimatedCostUsd, { precise: true })}
               />
+              {s.inputTokens != null || s.outputTokens != null ? (
+                <Metric
+                  label="Tokens (in/out)"
+                  value={`${formatTokens(s.inputTokens)} / ${formatTokens(s.outputTokens)}`}
+                />
+              ) : null}
               <Metric
                 label="Cost-value"
                 value={cvi == null ? "—" : `${formatScore(cvi)} q/$`}

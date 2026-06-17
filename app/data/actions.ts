@@ -91,6 +91,8 @@ const sessionImport = z.object({
   timeSpentMinutes: z.number().int(),
   estimatedTimeSavedMinutes: z.number().int(),
   estimatedCostUsd: nnum,
+  inputTokens: nint,
+  outputTokens: nint,
   quotaFeeling: z.enum(QUOTA_FEELINGS),
   humanInterventionLevel: z.enum(INTERVENTION_LEVELS),
   testsRun: z.boolean(),
