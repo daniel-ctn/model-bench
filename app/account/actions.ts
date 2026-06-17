@@ -22,3 +22,26 @@ export async function generateIngestToken(): Promise<
     return fail(e instanceof Error ? e.message : "Could not generate a token.");
   }
 }
+
+/** Set or clear the monthly spend target. Pass null to clear it. */
+export async function setMonthlyBudget(
+  value: number | null,
+): Promise<ActionResult<{ value: number | null }>> {
+  const userId = await requireUserId();
+  const clean =
+    value == null || !Number.isFinite(value) || value <= 0
+      ? null
+      : Math.round(value * 100) / 100;
+  try {
+    await db
+      .update(user)
+      .set({ monthlyBudgetUsd: clean })
+      .where(eq(user.id, userId));
+    revalidatePath("/account");
+    revalidatePath("/reports");
+    revalidatePath("/");
+    return ok({ value: clean });
+  } catch (e) {
+    return fail(e instanceof Error ? e.message : "Could not save budget.");
+  }
+}

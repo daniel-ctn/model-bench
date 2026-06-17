@@ -300,6 +300,39 @@ export function trendByDay(sessions: SessionWithRelations[]): TrendPoint[] {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+/* ---------------------------------- spend --------------------------------- */
+
+export type SpendPoint = {
+  /** yyyy-MM */
+  month: string;
+  cost: number;
+  count: number;
+};
+
+/** Total estimated cost grouped by calendar month, ascending, last N months. */
+export function spendByMonth(
+  sessions: SessionWithRelations[],
+  months = 6,
+): SpendPoint[] {
+  const buckets = new Map<string, { cost: number; count: number }>();
+  for (const s of sessions) {
+    const d = s.date;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.get(key);
+    const cost = s.estimatedCostUsd ?? 0;
+    if (b) {
+      b.cost += cost;
+      b.count += 1;
+    } else {
+      buckets.set(key, { cost, count: 1 });
+    }
+  }
+  return [...buckets.entries()]
+    .map(([month, b]) => ({ month, cost: round(b.cost, 2) ?? 0, count: b.count }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .slice(-months);
+}
+
 /* --------------------------- failure analytics ---------------------------- */
 
 export type FailureCount = { type: FailureType; label: string; value: number };

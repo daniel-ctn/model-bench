@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
+import { BudgetCard } from "@/components/account/budget-card";
 import { IngestTokenCard } from "@/components/account/ingest-token-card";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
 import { SectionCard } from "@/components/section-card";
@@ -26,7 +27,7 @@ export default async function AccountPage() {
   const current = await getCurrentUser();
   const row = await db.query.user.findFirst({
     where: eq(user.id, userId),
-    columns: { ingestToken: true },
+    columns: { ingestToken: true, monthlyBudgetUsd: true },
   });
   const endpoint = `${process.env.BETTER_AUTH_URL ?? ""}/api/sessions/ingest`;
 
@@ -49,6 +50,13 @@ export default async function AccountPage() {
           description="Updating signs out other sessions."
         >
           <ChangePasswordForm />
+        </SectionCard>
+        <SectionCard
+          title="Monthly budget"
+          description="Your spend target for budget alerts and projections."
+          className="lg:col-span-2"
+        >
+          <BudgetCard initial={row?.monthlyBudgetUsd ?? null} />
         </SectionCard>
         <SectionCard
           title="Agent ingestion"

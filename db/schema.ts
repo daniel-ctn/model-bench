@@ -175,6 +175,8 @@ export const user = pgTable("user", {
   image: text("image"),
   // Personal token agents use to POST draft sessions to /api/sessions/ingest.
   ingestToken: text("ingest_token").unique(),
+  // Optional monthly spend target (USD) used for budget alerts & projections.
+  monthlyBudgetUsd: doublePrecision("monthly_budget_usd"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });

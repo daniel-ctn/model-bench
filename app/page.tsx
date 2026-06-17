@@ -27,7 +27,7 @@ import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { listSessions } from "@/db/queries";
+import { getMonthlyBudget, listSessions } from "@/db/queries";
 import { failureTypeLabels } from "@/lib/constants";
 import {
   formatCurrency,
@@ -67,7 +67,10 @@ function pctChange(curr: number, prev: number): number | null {
 }
 
 export default async function DashboardPage() {
-  const sessions = await listSessions();
+  const [sessions, budget] = await Promise.all([
+    listSessions(),
+    getMonthlyBudget(),
+  ]);
 
   if (sessions.length === 0) {
     return (
@@ -110,6 +113,16 @@ export default async function DashboardPage() {
 
   const kpis = summarize(monthSessions);
   const prev = summarize(lastMonthSessions);
+
+  // Budget tracking
+  const monthSpend = kpis.totalCost;
+  const dayOfMonth = now.getDate();
+  const daysInMonth = monthEnd.getDate();
+  const projectedSpend =
+    dayOfMonth > 0 ? (monthSpend / dayOfMonth) * daysInMonth : monthSpend;
+  const overBudget = budget != null && budget > 0 && monthSpend > budget;
+  const projectedOver =
+    budget != null && budget > 0 && !overBudget && projectedSpend > budget;
 
   // Best models (all-time, ignoring tiny samples where possible).
   const modelBoard = leaderboard(sessions, byModel);
@@ -180,6 +193,41 @@ export default async function DashboardPage() {
         title="Dashboard"
         description={`Tracking ${sessions.length} session${sessions.length === 1 ? "" : "s"} across your AI workflow.`}
       />
+
+      {overBudget || projectedOver ? (
+        <Link
+          href="/reports"
+          className={cn(
+            "mb-4 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors",
+            overBudget
+              ? "border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
+              : "border-warning/30 bg-warning/5 hover:bg-warning/10",
+          )}
+        >
+          <TriangleAlert
+            className={cn(
+              "size-4 shrink-0",
+              overBudget ? "text-destructive" : "text-warning",
+            )}
+          />
+          <span className="flex-1">
+            {overBudget ? (
+              <>
+                <span className="font-medium">Over budget.</span> You&apos;ve
+                spent {formatCurrency(monthSpend)} of your{" "}
+                {formatCurrency(budget)} monthly budget.
+              </>
+            ) : (
+              <>
+                <span className="font-medium">Tracking over budget.</span> On
+                pace for {formatCurrency(projectedSpend)} this month vs your{" "}
+                {formatCurrency(budget)} budget.
+              </>
+            )}
+          </span>
+          <ArrowRight className="text-muted-foreground/50 size-4 shrink-0" />
+        </Link>
+      ) : null}
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

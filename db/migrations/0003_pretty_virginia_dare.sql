@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "monthly_budget_usd" double precision;

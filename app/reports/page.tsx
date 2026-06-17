@@ -1,19 +1,23 @@
 import Link from "next/link";
 import {
+  endOfMonth,
   startOfMonth,
   startOfWeek,
   subWeeks,
 } from "date-fns";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { BarChart3, DollarSign, TrendingUp, Wallet } from "lucide-react";
 
 import { ScoreBadge } from "@/components/badges";
 import { FailureHeatmap } from "@/components/charts/failure-heatmap";
+import { SpendTrendChart } from "@/components/charts/spend-trend-chart";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
+import { BreakEvenCalculator } from "@/components/reports/break-even-calculator";
 import { SectionCard } from "@/components/section-card";
 import { StatCard } from "@/components/stat-card";
 import { StatsLeaderboard } from "@/components/tables/stats-leaderboard";
 import { ToneBadge } from "@/components/tone-badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -23,21 +27,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { listSessions } from "@/db/queries";
+import { getMonthlyBudget, listSessions } from "@/db/queries";
 import { taskTypeLabels } from "@/lib/constants";
 import {
   formatCurrency,
+  formatDate,
   formatHours,
   formatScore,
 } from "@/lib/format";
 import {
   bestBy,
   byModel,
+  byTaskType,
   failureHeatmap,
   leaderboard,
   mean,
   netTimeSaved,
+  round,
   sortLeaderboard,
+  spendByMonth,
   summarize,
 } from "@/lib/metrics";
 import type { ModelStrength, SessionWithRelations, TaskType, Tone } from "@/types";
@@ -73,7 +81,10 @@ function worthItVerdict(delta: number): { label: string; tone: Tone } {
 }
 
 export default async function ReportsPage() {
-  const sessions = await listSessions();
+  const [sessions, budget] = await Promise.all([
+    listSessions(),
+    getMonthlyBudget(),
+  ]);
 
   if (sessions.length === 0) {
     return (
@@ -153,6 +164,30 @@ export default async function ReportsPage() {
 
   const heatmap = failureHeatmap(sessions);
 
+  // Cost & budget
+  const monthSpend = monthSessions.reduce(
+    (a, s) => a + (s.estimatedCostUsd ?? 0),
+    0,
+  );
+  const dayOfMonth = now.getDate();
+  const daysInMonth = endOfMonth(now).getDate();
+  const projectedSpend =
+    dayOfMonth > 0 ? (monthSpend / dayOfMonth) * daysInMonth : monthSpend;
+  const spend = spendByMonth(sessions, 6);
+  const spendData = spend.map((p) => ({
+    label: formatDate(`${p.month}-01`, "MMM"),
+    cost: p.cost,
+  }));
+  const avgMonthlySpend = spend.length
+    ? (round(mean(spend.map((p) => p.cost)), 2) ?? 0)
+    : 0;
+  const costByTask = leaderboard(sessions, byTaskType)
+    .filter((r) => r.stats.totalCost > 0)
+    .sort((a, b) => b.stats.totalCost - a.stats.totalCost);
+  const budgetPct =
+    budget && budget > 0 ? Math.min(100, (monthSpend / budget) * 100) : null;
+  const projectedOver = budget != null && budget > 0 && projectedSpend > budget;
+
   return (
     <PageContainer>
       <PageHeader
@@ -165,6 +200,7 @@ export default async function ReportsPage() {
           <TabsTrigger value="weekly">Weekly review</TabsTrigger>
           <TabsTrigger value="rankings">Model rankings</TabsTrigger>
           <TabsTrigger value="bytask">By task type</TabsTrigger>
+          <TabsTrigger value="cost">Cost &amp; budget</TabsTrigger>
           <TabsTrigger value="failures">Failures</TabsTrigger>
           <TabsTrigger value="flagship">Flagship worth it?</TabsTrigger>
         </TabsList>
@@ -325,6 +361,120 @@ export default async function ReportsPage() {
                 </TableBody>
               </Table>
             </div>
+          </SectionCard>
+        </TabsContent>
+
+        {/* Cost & budget */}
+        <TabsContent value="cost" className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatCard
+              label="Spent this month"
+              value={formatCurrency(monthSpend)}
+              icon={DollarSign}
+            />
+            <StatCard
+              label="Projected this month"
+              value={formatCurrency(projectedSpend)}
+              icon={TrendingUp}
+              hint={`at the current pace (day ${dayOfMonth}/${daysInMonth})`}
+            />
+            <StatCard
+              label="Monthly budget"
+              value={budget != null ? formatCurrency(budget) : "Not set"}
+              icon={Wallet}
+            />
+          </div>
+
+          {budget != null && budget > 0 ? (
+            <SectionCard
+              title="Budget progress"
+              description="This month's spend against your target."
+            >
+              <div className="flex flex-col gap-3">
+                <Progress value={budgetPct ?? 0} />
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="text-muted-foreground">
+                    {formatCurrency(monthSpend)} of {formatCurrency(budget)} (
+                    {Math.round(budgetPct ?? 0)}%)
+                  </span>
+                  <ToneBadge tone={projectedOver ? "danger" : "success"} dot>
+                    {projectedOver
+                      ? `Projected to exceed by ${formatCurrency(projectedSpend - budget)}`
+                      : "On track to stay under budget"}
+                  </ToneBadge>
+                </div>
+              </div>
+            </SectionCard>
+          ) : (
+            <SectionCard
+              title="Budget progress"
+              description="Set a monthly budget to track spend against a target."
+            >
+              <p className="text-muted-foreground text-sm">
+                No budget set.{" "}
+                <Link href="/account" className="text-primary hover:underline">
+                  Set one on the Account page
+                </Link>{" "}
+                to unlock alerts and projections.
+              </p>
+            </SectionCard>
+          )}
+
+          <SectionCard
+            title="Spend by month"
+            description="Estimated cost of logged sessions per month."
+          >
+            <SpendTrendChart data={spendData} budget={budget} />
+          </SectionCard>
+
+          <SectionCard
+            title="Where the money goes"
+            description="Total spend by task type, highest first."
+            contentClassName="p-0"
+          >
+            {costByTask.length === 0 ? (
+              <p className="text-muted-foreground px-6 pb-6 text-sm">
+                No sessions with cost estimates yet.
+              </p>
+            ) : (
+              <div className="scrollbar-thin overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Task type</TableHead>
+                      <TableHead className="text-right">Total cost</TableHead>
+                      <TableHead className="text-right">Sessions</TableHead>
+                      <TableHead className="text-center">Cost-value</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {costByTask.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium">
+                          {taskTypeLabels[r.id as TaskType] ?? r.label}
+                        </TableCell>
+                        <TableCell className="tabnum text-right">
+                          {formatCurrency(r.stats.totalCost)}
+                        </TableCell>
+                        <TableCell className="tabnum text-right text-sm">
+                          {r.stats.count}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <ScoreBadge value={r.stats.avgCostValue} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </SectionCard>
+
+          <SectionCard
+            title="Subscription break-even"
+            description="Is a flat plan worth it at your usage? Compares your notional API-equivalent spend to a plan price."
+          >
+            <BreakEvenCalculator monthlySpend={avgMonthlySpend} />
           </SectionCard>
         </TabsContent>
 
