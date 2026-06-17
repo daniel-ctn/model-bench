@@ -7,7 +7,14 @@ export const dynamic = "force-dynamic";
 function csvCell(value: unknown): string {
   if (value == null) return "";
   const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  // Neutralize spreadsheet formula injection (CWE-1236): a text cell starting
+  // with a formula trigger is prefixed with a quote so Excel/Sheets treat it as
+  // literal text. Numbers (e.g. negative deltas) are left untouched.
+  const guarded =
+    typeof value !== "number" && /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return /[",\n]/.test(guarded)
+    ? `"${guarded.replace(/"/g, '""')}"`
+    : guarded;
 }
 
 const HEADERS = [
