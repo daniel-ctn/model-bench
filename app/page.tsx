@@ -17,6 +17,7 @@ import {
   ResultStatusBadge,
   ScoreBadge,
 } from "@/components/badges";
+import { ActivityHeatmap } from "@/components/charts/activity-heatmap";
 import { CostValueScatter } from "@/components/charts/cost-value-scatter";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { ScoreTrendChart } from "@/components/charts/score-trend-chart";
@@ -48,6 +49,7 @@ import {
   trendByDay,
 } from "@/lib/metrics";
 import { computeSignals } from "@/lib/metrics/signals";
+import { activityData } from "@/lib/metrics/activity";
 import { inWindow, resolveRange } from "@/lib/date-range";
 import { cn } from "@/lib/utils";
 import type { Tone } from "@/types";
@@ -182,6 +184,9 @@ export default async function DashboardPage({
 
   // Computed signals worth a glance (top few).
   const signals = computeSignals(sessions).slice(0, 5);
+
+  // Logging activity & streaks (all-time).
+  const activity = activityData(sessions);
 
   // Sessions to review — lowest reliability / problematic first
   const toReview = [...sessions]
@@ -374,6 +379,22 @@ export default async function DashboardPage({
         </SectionCard>
       </div>
 
+      {/* Activity */}
+      <div className="mt-4">
+        <SectionCard
+          title="Activity"
+          description="Your logging cadence over the last 26 weeks."
+        >
+          <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <ActivityTile label="Current streak" value={`${activity.currentStreak}d`} />
+            <ActivityTile label="Longest streak" value={`${activity.longestStreak}d`} />
+            <ActivityTile label="Active days" value={activity.daysActive} />
+            <ActivityTile label="Sessions (26w)" value={activity.totalInRange} />
+          </div>
+          <ActivityHeatmap weeks={activity.weeks} maxCount={activity.maxCount} />
+        </SectionCard>
+      </div>
+
       {/* Signals */}
       {signals.length > 0 ? (
         <div className="mt-4">
@@ -521,6 +542,21 @@ export default async function DashboardPage({
         </SectionCard>
       </div>
     </PageContainer>
+  );
+}
+
+function ActivityTile({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="tabnum mt-0.5 text-xl font-semibold">{value}</p>
+    </div>
   );
 }
 
