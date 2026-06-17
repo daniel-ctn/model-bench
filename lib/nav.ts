@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   NotebookPen,
+  Sparkles,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -43,6 +44,12 @@ export const mainNav: NavItem[] = [
     href: "/projects",
     icon: FolderKanban,
     match: (p) => p.startsWith("/projects"),
+  },
+  {
+    title: "Recommend",
+    href: "/recommend",
+    icon: Sparkles,
+    match: (p) => p.startsWith("/recommend"),
   },
   {
     title: "Insights",

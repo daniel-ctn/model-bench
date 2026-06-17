@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   Bot,
   FlaskConical,
+  Lightbulb,
   Palette,
   PenLine,
   Plus,
@@ -31,6 +32,8 @@ import { FormBar, FormSection, useEntitySubmit } from "@/components/forms/form-u
 import { Button } from "@/components/ui/button";
 import { createSession, updateSession } from "@/app/sessions/actions";
 import type { FormLookups } from "@/db/queries/lookups";
+import { formatScore } from "@/lib/format";
+import type { TaskHint } from "@/lib/metrics";
 import { zodFormResolver } from "@/lib/resolver";
 import {
   interventionOptions,
@@ -69,11 +72,13 @@ export function SessionForm({
   mode,
   sessionId,
   initialValues,
+  taskHints,
 }: {
   lookups: FormLookups;
   mode: "create" | "edit";
   sessionId?: string;
   initialValues?: SessionFormValues;
+  taskHints?: Partial<Record<string, TaskHint>>;
 }) {
   const form = useForm<SessionFormValues>({
     resolver: zodFormResolver(sessionFormSchema),
@@ -85,6 +90,10 @@ export function SessionForm({
 
   const testsRun = useWatch({ control, name: "testsRun" });
   const requiredFollowup = useWatch({ control, name: "requiredFollowupModel" });
+  const taskType = useWatch({ control, name: "taskType" });
+  const modelId = useWatch({ control, name: "modelId" });
+  const hint = taskHints?.[taskType];
+  const showHint = hint && hint.modelId !== modelId;
 
   const projectOptions = [
     { value: "none", label: "No project" },
@@ -217,6 +226,30 @@ export function SessionForm({
             options={workflowTypeOptions}
             required
           />
+          {showHint ? (
+            <div className="border-primary/30 bg-primary/5 text-foreground sm:col-span-2 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-2 text-sm">
+              <Lightbulb className="text-primary size-4 shrink-0" />
+              <span>
+                For this task type, your strongest model has been{" "}
+                <span className="font-medium">{hint!.label}</span>
+                {hint!.quality != null
+                  ? ` (${formatScore(hint!.quality)}/10 over ${hint!.count} session${hint!.count === 1 ? "" : "s"})`
+                  : ""}
+                .
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary h-auto px-2 py-0.5"
+                onClick={() =>
+                  setValue("modelId", hint!.modelId, { shouldDirty: true })
+                }
+              >
+                Use {hint!.label}
+              </Button>
+            </div>
+          ) : null}
         </FormSection>
 
         <FormSection
