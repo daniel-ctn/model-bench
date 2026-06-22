@@ -1,4 +1,4 @@
-import { NotebookPen } from "lucide-react";
+import { NotebookPen, ShieldAlert, TrendingDown, Trophy } from "lucide-react";
 
 import { EmptyState } from "@/components/empty-state";
 import { SectionCard } from "@/components/section-card";
@@ -23,8 +23,10 @@ import type { SessionWithRelations, TaskType } from "@/types";
 function Tile({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="tabnum mt-0.5 text-lg font-semibold">{value}</p>
+      <p className="eyebrow text-muted-foreground">{label}</p>
+      <p className="font-heading tabnum mt-1.5 text-lg font-semibold tracking-tight">
+        {value}
+      </p>
     </div>
   );
 }
@@ -100,6 +102,8 @@ export function EntityDashboard({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard
+          eyebrow="Strengths"
+          icon={Trophy}
           title="Best task types"
           description="Where it shines — highest average quality."
         >
@@ -111,6 +115,8 @@ export function EntityDashboard({
         </SectionCard>
         {worst.length ? (
           <SectionCard
+            eyebrow="Weak spots"
+            icon={TrendingDown}
             title="Weakest task types"
             description="Where it struggles — lowest average quality."
           >
@@ -118,6 +124,8 @@ export function EntityDashboard({
           </SectionCard>
         ) : (
           <SectionCard
+            eyebrow="Failures"
+            icon={ShieldAlert}
             title="Common failure patterns"
             description="Most frequent failure modes."
           >
@@ -134,6 +142,8 @@ export function EntityDashboard({
 
       {worst.length ? (
         <SectionCard
+          eyebrow="Failures"
+          icon={ShieldAlert}
           title="Common failure patterns"
           description="Most frequent failure modes."
         >
@@ -148,9 +158,14 @@ export function EntityDashboard({
       ) : null}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold">
-          Session history ({sessions.length})
-        </h2>
+        <div className="mb-2 flex items-center gap-2">
+          <h2 className="font-heading text-sm font-semibold tracking-tight">
+            Session history
+          </h2>
+          <span className="text-muted-foreground tabnum text-xs">
+            {sessions.length}
+          </span>
+        </div>
         <SessionsTable sessions={sessions} />
       </div>
     </div>

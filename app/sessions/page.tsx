@@ -6,8 +6,11 @@ import { SessionsFilterBar } from "@/components/filters/sessions-filter-bar";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
 import { SessionsTable } from "@/components/tables/sessions-table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { getFormLookups, listSessions, type SessionFilters } from "@/db/queries";
 import { RESULT_STATUSES, TASK_TYPES } from "@/db/schema";
+import { formatCurrency, formatHours, formatScore } from "@/lib/format";
+import { summarize } from "@/lib/metrics";
 import { dateFromInput } from "@/lib/normalize";
 import type { ResultStatus, TaskType } from "@/types";
 
@@ -63,10 +66,12 @@ export default async function SessionsPage({
   const draftCount = drafts.length;
 
   const hasFilters = Object.values(sp).some(Boolean);
+  const kpis = summarize(sessions);
 
   return (
     <PageContainer>
       <PageHeader
+        eyebrow="Journal"
         title="Sessions"
         description="Every meaningful use of an AI tool or model, scored and reflected on."
       >
@@ -94,14 +99,32 @@ export default async function SessionsPage({
 
       <SessionsFilterBar lookups={lookups} />
 
+      {sessions.length > 0 ? (
+        <Card className="mb-4 gap-0 py-0">
+          <CardContent className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-4">
+            <SummaryTile
+              label={hasFilters ? "Matching" : "Sessions"}
+              value={`${sessions.length}`}
+            />
+            <SummaryTile
+              label="Net time saved"
+              value={formatHours(kpis.netTimeSavedMinutes)}
+            />
+            <SummaryTile
+              label="Avg quality"
+              value={`${formatScore(kpis.avgQuality)}/10`}
+            />
+            <SummaryTile
+              label="Est. cost"
+              value={formatCurrency(kpis.totalCost)}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="mt-4">
         {sessions.length > 0 ? (
-          <>
-            <SessionsTable sessions={sessions} />
-            <p className="text-muted-foreground mt-3 text-xs">
-              {sessions.length} session{sessions.length === 1 ? "" : "s"}
-            </p>
-          </>
+          <SessionsTable sessions={sessions} />
         ) : hasFilters ? (
           <EmptyState
             icon={SearchX}
@@ -122,5 +145,16 @@ export default async function SessionsPage({
         )}
       </div>
     </PageContainer>
+  );
+}
+
+function SummaryTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="eyebrow text-muted-foreground">{label}</p>
+      <p className="font-heading tabnum mt-1.5 text-xl font-semibold tracking-tight">
+        {value}
+      </p>
+    </div>
   );
 }

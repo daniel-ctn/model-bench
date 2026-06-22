@@ -5,7 +5,14 @@ import {
   startOfWeek,
   subWeeks,
 } from "date-fns";
-import { BarChart3, DollarSign, TrendingUp, Wallet } from "lucide-react";
+import {
+  BarChart3,
+  Clock,
+  DollarSign,
+  Gauge,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 
 import { ScoreBadge } from "@/components/badges";
 import { FailureHeatmap } from "@/components/charts/failure-heatmap";
@@ -201,10 +208,12 @@ export default async function ReportsPage({
   const budgetPct =
     budget && budget > 0 ? Math.min(100, (monthSpend / budget) * 100) : null;
   const projectedOver = budget != null && budget > 0 && projectedSpend > budget;
+  const overBudgetNow = budget != null && budget > 0 && monthSpend > budget;
 
   return (
     <PageContainer>
       <PageHeader
+        eyebrow="Analytics"
         title="Reports"
         description="Weekly reviews, rankings and where the strong models earn their cost."
       >
@@ -228,12 +237,15 @@ export default async function ReportsPage({
               label="Sessions this week"
               value={week.count}
               icon={TrendingUp}
+              accent="primary"
               delta={prevWeek.count ? { value: pctChange(week.count, prevWeek.count) ?? 0 } : null}
               hint="vs last week"
             />
             <StatCard
               label="Net time saved"
               value={formatHours(week.netTimeSavedMinutes)}
+              icon={Clock}
+              accent="success"
               delta={
                 prevWeek.netTimeSavedMinutes
                   ? { value: pctChange(week.netTimeSavedMinutes, prevWeek.netTimeSavedMinutes) ?? 0 }
@@ -244,6 +256,8 @@ export default async function ReportsPage({
             <StatCard
               label="Spend"
               value={formatCurrency(week.totalCost)}
+              icon={DollarSign}
+              accent="warning"
               delta={
                 prevWeek.totalCost
                   ? { value: pctChange(week.totalCost, prevWeek.totalCost) ?? 0, positiveIsGood: false }
@@ -254,6 +268,8 @@ export default async function ReportsPage({
             <StatCard
               label="Avg quality"
               value={`${formatScore(week.avgQuality)}/10`}
+              icon={Gauge}
+              accent="info"
               delta={
                 week.avgQuality && prevWeek.avgQuality
                   ? { value: pctChange(week.avgQuality, prevWeek.avgQuality) ?? 0 }
@@ -389,17 +405,20 @@ export default async function ReportsPage({
               label="Spent this month"
               value={formatCurrency(monthSpend)}
               icon={DollarSign}
+              accent={overBudgetNow ? "danger" : "warning"}
             />
             <StatCard
               label="Projected this month"
               value={formatCurrency(projectedSpend)}
               icon={TrendingUp}
+              accent={projectedOver ? "danger" : "info"}
               hint={`at the current pace (day ${dayOfMonth}/${daysInMonth})`}
             />
             <StatCard
               label="Monthly budget"
               value={budget != null ? formatCurrency(budget) : "Not set"}
               icon={Wallet}
+              accent="primary"
             />
           </div>
 

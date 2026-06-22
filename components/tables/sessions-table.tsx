@@ -11,13 +11,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { taskTypeLabels } from "@/lib/constants";
+import { resultStatusTone, taskTypeLabels } from "@/lib/constants";
 import { formatDate, formatMinutes } from "@/lib/format";
 import { netTimeSaved } from "@/lib/metrics";
 import { cn } from "@/lib/utils";
-import type { SessionWithRelations } from "@/types";
+import type { SessionWithRelations, Tone } from "@/types";
 
 import { SessionRowActions } from "./session-row-actions";
+
+/** A thin status stripe so each row's health reads at a glance. */
+const toneStripe: Record<Tone, string> = {
+  primary: "border-l-primary/70",
+  success: "border-l-success/70",
+  warning: "border-l-warning/70",
+  danger: "border-l-destructive/70",
+  info: "border-l-info/70",
+  neutral: "border-l-border",
+};
 
 export function SessionsTable({
   sessions,
@@ -28,7 +38,7 @@ export function SessionsTable({
     <div className="scrollbar-thin overflow-x-auto rounded-xl border">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
+          <TableRow className="hover:bg-transparent [&>th]:text-muted-foreground [&>th]:text-xs [&>th]:font-medium [&>th]:uppercase [&>th]:tracking-wider">
             <TableHead className="min-w-[220px]">Session</TableHead>
             <TableHead className="hidden md:table-cell">Date</TableHead>
             <TableHead className="hidden lg:table-cell">Task</TableHead>
@@ -47,7 +57,12 @@ export function SessionsTable({
             const net = netTimeSaved(s);
             return (
               <TableRow key={s.id} className="group">
-                <TableCell className="max-w-[320px]">
+                <TableCell
+                  className={cn(
+                    "max-w-[320px] border-l-2",
+                    toneStripe[resultStatusTone[s.resultStatus]],
+                  )}
+                >
                   <div className="flex items-center gap-2">
                     <Link
                       href={`/sessions/${s.id}`}
