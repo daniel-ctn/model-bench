@@ -21,24 +21,33 @@ import { isActive, mainNav, utilityNav } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./user-menu";
 
+/** Branded active treatment: a primary accent rail + tinted icon. */
+const activeItem =
+  "relative before:absolute before:top-1.5 before:bottom-1.5 before:left-0 before:w-[3px] before:rounded-full before:bg-sidebar-primary before:content-[''] [&_svg]:text-sidebar-primary";
+
 export function AppSidebar() {
   const pathname = usePathname();
 
+  const groups: { label: string; items: typeof mainNav }[] = [
+    { label: "Workspace", items: mainNav },
+    { label: "Data", items: utilityNav },
+  ];
+
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+      <SidebarHeader className="pb-1">
         <Link
           href="/"
           className="flex items-center gap-2.5 px-1.5 py-1.5 group-data-[collapsible=icon]:justify-center"
         >
-          <span className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg shadow-sm">
+          <span className="bg-primary text-primary-foreground ring-primary/20 flex size-8 shrink-0 items-center justify-center rounded-lg shadow-sm ring-1">
             <Gauge className="size-4.5" />
           </span>
           <span className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold tracking-tight">
+            <span className="font-heading text-sm font-semibold tracking-tight">
               ModelBench
             </span>
-            <span className="text-muted-foreground text-[11px] font-medium">
+            <span className="text-muted-foreground/80 eyebrow mt-0.5">
               Journal
             </span>
           </span>
@@ -46,45 +55,33 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={isActive(item, pathname)}
-                    tooltip={item.title}
-                    render={<Link href={item.href} />}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Data</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {utilityNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={isActive(item, pathname)}
-                    tooltip={item.title}
-                    render={<Link href={item.href} />}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {groups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="eyebrow text-sidebar-foreground/55">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                {group.items.map((item) => {
+                  const active = isActive(item, pathname);
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={active}
+                        tooltip={item.title}
+                        className={cn(active && activeItem)}
+                        render={<Link href={item.href} />}
+                      >
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter>
