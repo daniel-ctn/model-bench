@@ -2,6 +2,7 @@ import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import type { Tone } from "@/types";
 
 export type StatDelta = {
   /** Percentage change vs the comparison period. */
@@ -10,12 +11,22 @@ export type StatDelta = {
   positiveIsGood?: boolean;
 };
 
+const accentChip: Record<Tone, string> = {
+  primary: "bg-primary/10 text-primary",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
+  danger: "bg-destructive/10 text-destructive",
+  info: "bg-info/10 text-info",
+  neutral: "bg-muted text-muted-foreground",
+};
+
 export function StatCard({
   label,
   value,
   icon: Icon,
   hint,
   delta,
+  accent,
   className,
 }: {
   label: string;
@@ -23,6 +34,8 @@ export function StatCard({
   icon?: LucideIcon;
   hint?: React.ReactNode;
   delta?: StatDelta | null;
+  /** Tints the icon into a coloured chip so KPIs read as distinct types. */
+  accent?: Tone;
   className?: string;
 }) {
   const showDelta = delta && Number.isFinite(delta.value) && delta.value !== 0;
@@ -34,12 +47,23 @@ export function StatCard({
     <Card className={cn("gap-0 py-0", className)}>
       <CardContent className="flex flex-col gap-2 p-5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            {label}
-          </span>
-          {Icon ? <Icon className="text-muted-foreground/60 size-4" /> : null}
+          <span className="eyebrow text-muted-foreground">{label}</span>
+          {Icon ? (
+            accent ? (
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                  accentChip[accent],
+                )}
+              >
+                <Icon className="size-4" />
+              </span>
+            ) : (
+              <Icon className="text-muted-foreground/60 size-4" />
+            )
+          ) : null}
         </div>
-        <div className="tabnum text-2xl font-semibold tracking-tight">
+        <div className="tabnum font-heading text-2xl font-semibold tracking-tight">
           {value}
         </div>
         {(showDelta || hint) && (

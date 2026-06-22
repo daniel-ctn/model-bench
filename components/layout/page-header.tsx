@@ -22,11 +22,14 @@ export function PageContainer({
 export function PageHeader({
   title,
   description,
+  eyebrow,
   children,
   className,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
+  /** Small uppercase kicker above the page title. */
+  eyebrow?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
 }) {
@@ -38,7 +41,12 @@ export function PageHeader({
       )}
     >
       <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        {eyebrow ? (
+          <p className="eyebrow text-muted-foreground">{eyebrow}</p>
+        ) : null}
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">
+          {title}
+        </h1>
         {description ? (
           <p className="text-muted-foreground max-w-2xl text-sm">
             {description}
