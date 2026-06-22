@@ -2,15 +2,20 @@ import Link from "next/link";
 import { endOfMonth, startOfMonth } from "date-fns";
 import {
   ArrowRight,
-  Boxes,
+  CalendarRange,
   ClipboardList,
   Clock,
+  Coins,
   DollarSign,
   Gauge,
+  LineChart,
   NotebookPen,
+  PieChart,
   ShieldAlert,
   Sparkles,
   TriangleAlert,
+  Trophy,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -63,6 +68,15 @@ const signalDotClass: Record<Tone, string> = {
   danger: "bg-destructive",
   info: "bg-info",
   neutral: "bg-muted-foreground",
+};
+
+const signalBorderClass: Record<Tone, string> = {
+  primary: "border-l-primary/60",
+  success: "border-l-success/60",
+  warning: "border-l-warning/60",
+  danger: "border-l-destructive/60",
+  info: "border-l-info/60",
+  neutral: "border-l-border",
 };
 
 function pctChange(curr: number, prev: number): number | null {
@@ -204,6 +218,7 @@ export default async function DashboardPage({
   return (
     <PageContainer>
       <PageHeader
+        eyebrow="Command center"
         title="Dashboard"
         description={`Tracking ${sessions.length} session${sessions.length === 1 ? "" : "s"} across your AI workflow.`}
       >
@@ -251,6 +266,7 @@ export default async function DashboardPage({
           label="Sessions"
           value={kpis.count}
           icon={NotebookPen}
+          accent="primary"
           delta={
             prev.count
               ? { value: pctChange(kpis.count, prev.count) ?? 0 }
@@ -262,6 +278,7 @@ export default async function DashboardPage({
           label="Net time saved"
           value={formatHours(kpis.netTimeSavedMinutes)}
           icon={Clock}
+          accent="success"
           delta={
             prev.netTimeSavedMinutes
               ? {
@@ -279,6 +296,7 @@ export default async function DashboardPage({
           label="Estimated cost"
           value={formatCurrency(kpis.totalCost)}
           icon={DollarSign}
+          accent="warning"
           delta={
             prev.totalCost
               ? {
@@ -300,6 +318,7 @@ export default async function DashboardPage({
             </span>
           }
           icon={Gauge}
+          accent="info"
           delta={
             prev.avgQuality && kpis.avgQuality
               ? { value: pctChange(kpis.avgQuality, prev.avgQuality) ?? 0 }
@@ -309,56 +328,62 @@ export default async function DashboardPage({
         />
       </div>
 
-      {/* Highlight row */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <HighlightCard
-          icon={Boxes}
-          tone="primary"
-          eyebrow="Best model · quality"
-          title={bestQuality?.label ?? "—"}
-          metric={
-            bestQuality
-              ? `${formatScore(bestQuality.stats.avgQuality)}/10 avg · ${bestQuality.stats.count} sessions`
-              : "Not enough data"
-          }
+      {/* Verdict band — a headline pick plus the supporting value / risk reads */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <ModelSpotlight
+          className="lg:col-span-2"
+          label={bestQuality?.label ?? "No ranked model yet"}
+          score={bestQuality?.stats.avgQuality ?? null}
+          count={bestQuality?.stats.count ?? 0}
           href={bestQuality ? `/models/${bestQuality.id}` : undefined}
         />
-        <HighlightCard
-          icon={Sparkles}
-          tone="success"
-          eyebrow="Best model · cost-value"
-          title={bestCostValue?.label ?? "—"}
-          metric={
-            bestCostValue && bestCostValue.stats.avgCostValue != null
-              ? `${formatScore(bestCostValue.stats.avgCostValue)} quality/$ · ${bestCostValue.stats.count} sessions`
-              : "Add cost estimates"
-          }
-          href={bestCostValue ? `/models/${bestCostValue.id}` : undefined}
-        />
-        <HighlightCard
-          icon={ShieldAlert}
-          tone="danger"
-          eyebrow="Worst recurring failure"
-          title={worstFailure?.label ?? "None yet"}
-          metric={
-            worstFailure
-              ? `${worstFailure.value} occurrence${worstFailure.value === 1 ? "" : "s"}`
-              : "No failure patterns logged"
-          }
-          href="/reports"
-        />
+        <div className="flex flex-col gap-4">
+          <HighlightCard
+            className="flex-1"
+            icon={Coins}
+            tone="success"
+            eyebrow="Best value"
+            title={bestCostValue?.label ?? "—"}
+            metric={
+              bestCostValue && bestCostValue.stats.avgCostValue != null
+                ? `${formatScore(bestCostValue.stats.avgCostValue)} quality/$ · ${bestCostValue.stats.count} sessions`
+                : "Add cost estimates"
+            }
+            href={bestCostValue ? `/models/${bestCostValue.id}` : undefined}
+          />
+          <HighlightCard
+            className="flex-1"
+            icon={ShieldAlert}
+            tone="danger"
+            eyebrow="Needs attention"
+            title={worstFailure?.label ?? "None yet"}
+            metric={
+              worstFailure
+                ? `${worstFailure.value} occurrence${worstFailure.value === 1 ? "" : "s"}`
+                : "No failure patterns logged"
+            }
+            href="/reports"
+          />
+        </div>
       </div>
 
       {/* Charts row 1 */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <SectionCard
           className="lg:col-span-2"
+          eyebrow="Trend"
+          icon={LineChart}
           title="Score & reliability trend"
           description="Average quality and reliability (rescaled to /10) over recent active days."
         >
           <ScoreTrendChart data={trendData} />
         </SectionCard>
-        <SectionCard title="Usage by tool" description="Share of logged sessions.">
+        <SectionCard
+          eyebrow="Mix"
+          icon={PieChart}
+          title="Usage by tool"
+          description="Share of logged sessions."
+        >
           <DonutChart data={toolUsage} />
         </SectionCard>
       </div>
@@ -366,12 +391,16 @@ export default async function DashboardPage({
       {/* Charts row 2 */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard
+          eyebrow="Throughput"
+          icon={Clock}
           title="Time saved vs time spent"
           description="Hours per recent active day."
         >
           <TimeBalanceChart data={timeData} />
         </SectionCard>
         <SectionCard
+          eyebrow="Value"
+          icon={Coins}
           title="Cost vs quality"
           description="Each point is a session — top-left is great value."
         >
@@ -382,6 +411,8 @@ export default async function DashboardPage({
       {/* Activity */}
       <div className="mt-4">
         <SectionCard
+          eyebrow="Cadence"
+          icon={CalendarRange}
           title="Activity"
           description="Your logging cadence over the last 26 weeks."
         >
@@ -399,6 +430,8 @@ export default async function DashboardPage({
       {signals.length > 0 ? (
         <div className="mt-4">
           <SectionCard
+            eyebrow="Attention"
+            icon={Sparkles}
             title="Signals"
             description="Patterns ModelBench spotted in your data."
             action={
@@ -418,7 +451,10 @@ export default async function DashboardPage({
                   <li key={sig.id}>
                     <Link
                       href={href}
-                      className="hover:bg-accent/40 flex items-center gap-3 px-6 py-3 transition-colors"
+                      className={cn(
+                        "hover:bg-accent/40 flex items-center gap-3 border-l-2 px-6 py-3 transition-colors",
+                        signalBorderClass[sig.tone],
+                      )}
                     >
                       <span
                         className={cn(
@@ -447,6 +483,8 @@ export default async function DashboardPage({
       {/* Lists row */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard
+          eyebrow="Leaderboard"
+          icon={Trophy}
           title="Top models"
           description={`Ranked by average quality · ${range.label.toLowerCase()}.`}
           action={
@@ -491,6 +529,8 @@ export default async function DashboardPage({
         </SectionCard>
 
         <SectionCard
+          eyebrow="Review"
+          icon={ClipboardList}
           title="Sessions to review"
           description="Lowest reliability or flagged with failures."
           action={
@@ -560,6 +600,64 @@ function ActivityTile({
   );
 }
 
+/** The elevated headline pick — the dashboard's strongest verdict. */
+function ModelSpotlight({
+  label,
+  score,
+  count,
+  href,
+  className,
+}: {
+  label: string;
+  score: number | null;
+  count: number;
+  href?: string;
+  className?: string;
+}) {
+  const hasData = score != null;
+  return (
+    <Card
+      className={cn(
+        "ring-primary/20 bg-primary/[0.04] gap-0 py-0",
+        className,
+      )}
+    >
+      <CardContent className="flex h-full flex-col p-6">
+        <div className="text-primary flex items-center gap-1.5">
+          <Sparkles className="size-3.5" />
+          <span className="eyebrow">Top model · quality</span>
+        </div>
+        <p className="font-heading mt-4 truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+          {label}
+        </p>
+        <p className="text-muted-foreground mt-1.5 text-sm">
+          {hasData
+            ? "Your highest average quality across logged work."
+            : "Log a few sessions to start ranking your models."}
+        </p>
+        <div className="mt-auto flex items-center justify-between pt-6">
+          <div className="flex items-center gap-2">
+            <ScoreBadge value={score} />
+            {hasData ? (
+              <span className="text-muted-foreground text-xs">
+                {count} session{count === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </div>
+          <Link
+            href={href ?? "/recommend"}
+            className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
+          >
+            {href ? "View model" : "Get a recommendation"}
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** A compact verdict card — value / risk reads beside the spotlight. */
 function HighlightCard({
   icon: Icon,
   eyebrow,
@@ -567,13 +665,15 @@ function HighlightCard({
   metric,
   href,
   tone,
+  className,
 }: {
-  icon: typeof Boxes;
+  icon: LucideIcon;
   eyebrow: string;
   title: string;
   metric: string;
   href?: string;
   tone: "primary" | "success" | "danger";
+  className?: string;
 }) {
   const toneClasses = {
     primary: "bg-primary/10 text-primary",
@@ -582,7 +682,7 @@ function HighlightCard({
   } as const;
 
   const inner = (
-    <CardContent className="flex items-center gap-4 p-5">
+    <CardContent className="flex h-full items-center gap-4 p-5">
       <span
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-xl",
@@ -592,10 +692,10 @@ function HighlightCard({
         <Icon className="size-5" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          {eyebrow}
+        <p className="eyebrow text-muted-foreground">{eyebrow}</p>
+        <p className="font-heading mt-1 truncate text-lg font-semibold tracking-tight">
+          {title}
         </p>
-        <p className="truncate text-lg font-semibold tracking-tight">{title}</p>
         <p className="text-muted-foreground truncate text-xs">{metric}</p>
       </div>
       {href ? (
@@ -606,10 +706,17 @@ function HighlightCard({
 
   if (href) {
     return (
-      <Card className="hover:border-border/80 gap-0 py-0 transition-colors">
-        <Link href={href}>{inner}</Link>
+      <Card
+        className={cn(
+          "hover:ring-foreground/20 gap-0 py-0 transition-[box-shadow]",
+          className,
+        )}
+      >
+        <Link href={href} className="block h-full">
+          {inner}
+        </Link>
       </Card>
     );
   }
-  return <Card className="gap-0 py-0">{inner}</Card>;
+  return <Card className={cn("gap-0 py-0", className)}>{inner}</Card>;
 }
