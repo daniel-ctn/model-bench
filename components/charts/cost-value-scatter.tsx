@@ -2,6 +2,8 @@
 
 import {
   CartesianGrid,
+  Cell,
+  ReferenceLine,
   Scatter,
   ScatterChart,
   XAxis,
@@ -27,6 +29,14 @@ export type CostValuePoint = {
   label: string;
   model: string;
 };
+
+/** Tier a point by quality so colour carries meaning, not just position. */
+function pointColor(q: number): string {
+  if (q >= 8) return "var(--success)";
+  if (q >= 6) return "var(--info)";
+  if (q >= 4) return "var(--warning)";
+  return "var(--destructive)";
+}
 
 type TooltipProps = {
   active?: boolean;
@@ -85,16 +95,32 @@ export function CostValueScatter({ data }: { data: CostValuePoint[] }) {
           fontSize={11}
         />
         <ZAxis type="number" range={[70, 70]} />
+        <ReferenceLine
+          y={7}
+          stroke="var(--success)"
+          strokeOpacity={0.4}
+          strokeDasharray="2 4"
+          label={{
+            value: "Good",
+            position: "insideTopLeft",
+            fontSize: 10,
+            fill: "var(--success)",
+            opacity: 0.7,
+          }}
+        />
         <ChartTooltip
           cursor={{ strokeDasharray: "3 3" }}
           content={<CostValueTooltip />}
         />
-        <Scatter
-          data={data}
-          fill="var(--color-quality)"
-          fillOpacity={0.7}
-          stroke="var(--color-quality)"
-        />
+        <Scatter data={data} fillOpacity={0.75}>
+          {data.map((d, i) => (
+            <Cell
+              key={i}
+              fill={pointColor(d.quality)}
+              stroke={pointColor(d.quality)}
+            />
+          ))}
+        </Scatter>
       </ScatterChart>
     </ChartContainer>
   );

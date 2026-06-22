@@ -1,6 +1,14 @@
 "use client";
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import {
   ChartContainer,
@@ -32,7 +40,13 @@ export function ScoreTrendChart({ data }: { data: ScoreTrendPoint[] }) {
 
   return (
     <ChartContainer config={config} className="h-[260px] w-full">
-      <LineChart data={data} margin={{ left: -16, right: 8, top: 8 }}>
+      <ComposedChart data={data} margin={{ left: -16, right: 8, top: 8 }}>
+        <defs>
+          <linearGradient id="fillQuality" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-quality)" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="var(--color-quality)" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis
           dataKey="label"
@@ -50,13 +64,20 @@ export function ScoreTrendChart({ data }: { data: ScoreTrendPoint[] }) {
           width={32}
           fontSize={11}
         />
+        <ReferenceLine
+          y={7}
+          stroke="var(--success)"
+          strokeOpacity={0.4}
+          strokeDasharray="2 4"
+        />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
-        <Line
+        <Area
           dataKey="quality"
           type="monotone"
           stroke="var(--color-quality)"
           strokeWidth={2}
+          fill="url(#fillQuality)"
           dot={false}
           connectNulls
         />
@@ -69,7 +90,7 @@ export function ScoreTrendChart({ data }: { data: ScoreTrendPoint[] }) {
           dot={false}
           connectNulls
         />
-      </LineChart>
+      </ComposedChart>
     </ChartContainer>
   );
 }

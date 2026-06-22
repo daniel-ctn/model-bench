@@ -1,6 +1,14 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import {
   ChartContainer,
@@ -30,6 +38,9 @@ export function SpendTrendChart({
     return <ChartEmpty message="Log sessions with cost estimates to see spend." />;
   }
 
+  const avg = data.reduce((a, d) => a + d.cost, 0) / data.length;
+  const overBudget = (cost: number) => budget != null && budget > 0 && cost > budget;
+
   return (
     <ChartContainer config={config} className="h-[260px] w-full">
       <BarChart data={data} margin={{ left: -8, right: 8, top: 8 }}>
@@ -55,6 +66,21 @@ export function SpendTrendChart({
             />
           }
         />
+        {data.length > 1 ? (
+          <ReferenceLine
+            y={avg}
+            stroke="var(--info)"
+            strokeOpacity={0.5}
+            strokeDasharray="2 4"
+            label={{
+              value: "Avg",
+              position: "insideTopLeft",
+              fontSize: 10,
+              fill: "var(--info)",
+              opacity: 0.8,
+            }}
+          />
+        ) : null}
         {budget != null && budget > 0 ? (
           <ReferenceLine
             y={budget}
@@ -68,7 +94,14 @@ export function SpendTrendChart({
             }}
           />
         ) : null}
-        <Bar dataKey="cost" fill="var(--color-cost)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="cost" radius={[4, 4, 0, 0]}>
+          {data.map((d, i) => (
+            <Cell
+              key={i}
+              fill={overBudget(d.cost) ? "var(--destructive)" : "var(--color-cost)"}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ChartContainer>
   );

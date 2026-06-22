@@ -1,6 +1,6 @@
 "use client";
 
-import { Cell, Pie, PieChart } from "recharts";
+import { Cell, Label, Pie, PieChart } from "recharts";
 
 import {
   ChartContainer,
@@ -73,6 +73,30 @@ export function DonutChart({ data }: { data: DonutItem[] }) {
             {withPercent.map((_, i) => (
               <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
             ))}
+            <Label
+              content={({ viewBox }) => {
+                if (!viewBox || !("cx" in viewBox)) return null;
+                const { cx, cy } = viewBox as { cx: number; cy: number };
+                return (
+                  <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+                    <tspan
+                      x={cx}
+                      y={cy - 6}
+                      className="fill-foreground font-heading tabnum text-2xl font-semibold"
+                    >
+                      {total}
+                    </tspan>
+                    <tspan
+                      x={cx}
+                      y={cy + 14}
+                      className="fill-muted-foreground text-[10px] tracking-wide uppercase"
+                    >
+                      sessions
+                    </tspan>
+                  </text>
+                );
+              }}
+            />
           </Pie>
         </PieChart>
       </ChartContainer>
