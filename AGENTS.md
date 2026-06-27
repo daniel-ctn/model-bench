@@ -78,6 +78,12 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Don't use linear gradient background unless I tell you or it's a really necessary case
 - Prefer to use color on project's design system over custom color
 
+## UI work
+For ANY user-facing UI in this repo — pages, components, charts, tables,
+and especially empty / loading / error states — follow the `eastbase-premium-ui`
+skill before writing or editing. Read it via the Skill tool; don't reproduce
+generic shadcn/SaaS defaults from memory.
+
 ## Windows shell (Command Prompt)
 
 **Prefer `cmd.exe` for all terminal commands on Windows** — not PowerShell.
