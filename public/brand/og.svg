@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+<defs>
+<pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+<path d="M56 0H0V56" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+</pattern>
+<filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+<feGaussianBlur stdDeviation="90"/>
+</filter>
+</defs>
+<rect width="1200" height="630" fill="#0d0e14"/>
+<rect width="1200" height="630" fill="url(#grid)"/>
+<circle cx="940" cy="150" r="150" fill="#976ef1" fill-opacity="0.18" filter="url(#glow)"/>
+<rect x="88" y="300" width="1024" height="1" fill="#ffffff" fill-opacity="0.08"/>
+<svg x="88" y="150" width="120" height="120" viewBox="0 0 32 32">
+<rect width="32" height="32" rx="7.5" fill="#976ef1"/>
+<path class="mb-m" d="M6 24 V6.5 L16 16.8 L26 6.5 V24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="mb-bench" d="M5.4 24 H26.6" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+<path class="mb-tick" d="M16 16.4 V11.6" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+<circle class="mb-node" cx="16" cy="9.2" r="2.1" fill="#ffffff"/>
+</svg>
+<text x="232" y="214" font-family="'Space Grotesk','Geist Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif" font-size="62" font-weight="600" letter-spacing="-1.5" fill="#f0f2f6">ModelBench</text>
+<text x="234" y="252" font-family="'Space Grotesk','Geist Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif" font-size="17" font-weight="600" letter-spacing="6" fill="#976ef1">JOURNAL</text>
+<text x="90" y="392" font-family="'Space Grotesk','Geist Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif" font-size="40" font-weight="500" letter-spacing="-0.5" fill="#f0f2f6">Track the real value of every AI model.</text>
+<text x="90" y="452" font-family="'Space Grotesk','Geist Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif" font-size="24" font-weight="400" fill="#999eab">Honest, confidence-aware benchmarks from your own sessions — not vanity metrics.</text>
+</svg>

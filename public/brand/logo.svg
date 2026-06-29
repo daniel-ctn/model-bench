@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 188 44" width="188" height="44" role="img" aria-label="ModelBench — Journal">
+<title>ModelBench — Journal</title>
+<svg x="0" y="2" width="40" height="40" viewBox="0 0 32 32">
+<rect width="32" height="32" rx="7.5" fill="#976ef1"/>
+<path class="mb-m" d="M6 24 V6.5 L16 16.8 L26 6.5 V24" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+<path class="mb-bench" d="M5.4 24 H26.6" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+<path class="mb-tick" d="M16 16.4 V11.6" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+<circle class="mb-node" cx="16" cy="9.2" r="2.1" fill="#ffffff"/>
+</svg>
+<text x="52" y="25.5" font-family="'Space Grotesk','Geist Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif" font-size="21" font-weight="600" letter-spacing="-0.4" fill="#f0f2f6">ModelBench</text>
+<text x="52.5" y="37.5" font-family="'Space Grotesk','Geist Sans',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif" font-size="8.5" font-weight="600" letter-spacing="2.4" fill="#999eab">JOURNAL</text>
+</svg>

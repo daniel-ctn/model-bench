@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ConditionalShell } from "@/components/layout/conditional-shell";
@@ -24,12 +24,20 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  ),
   title: {
     default: "ModelBench Journal",
     template: "%s · ModelBench Journal",
   },
   description:
     "A personal command center for tracking the real value of AI models and tools across coding, writing, research, and product work.",
+  applicationName: "ModelBench Journal",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0d0e14",
 };
 
 export default function RootLayout({
