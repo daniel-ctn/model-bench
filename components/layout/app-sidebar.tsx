@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gauge, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
+import { LogoMark } from "@/components/brand/logo-mark";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Sidebar,
@@ -40,9 +41,7 @@ export function AppSidebar() {
           href="/"
           className="flex items-center gap-2.5 px-1.5 py-1.5 group-data-[collapsible=icon]:justify-center"
         >
-          <span className="bg-primary text-primary-foreground ring-primary/20 flex size-8 shrink-0 items-center justify-center rounded-lg shadow-sm ring-1">
-            <Gauge className="size-4.5" />
-          </span>
+          <LogoMark variant="tile" animated title="ModelBench" className="size-8" />
           <span className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="font-heading text-sm font-semibold tracking-tight">
               ModelBench

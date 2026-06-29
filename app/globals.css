@@ -211,3 +211,66 @@
     background-clip: padding-box;
   }
 }
+
+@layer utilities {
+  /* ModelBench animated brand mark — a one-shot "measurement settling to its
+     value": the M draws in, the bench/datum rule and tick trace, and the
+     confidence node lands.
+
+     Robustness: the *base* state is the fully-drawn static mark. Motion is
+     added only under (prefers-reduced-motion: no-preference) and animates FROM
+     hidden using `both` fill, so reduced-motion, unsupported animations, or an
+     animation that simply never plays all leave the mark fully visible. The
+     reveal is paint-only (stroke-dashoffset / opacity / transform) — no layout
+     shift. */
+  @keyframes mb-draw {
+    from {
+      stroke-dashoffset: var(--mb-len);
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes mb-node-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.2);
+    }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  /* base = visible static mark (dash fully drawn at offset 0) */
+  .mb-anim .mb-m {
+    --mb-len: 64;
+    stroke-dasharray: 64;
+  }
+  .mb-anim .mb-bench {
+    --mb-len: 22;
+    stroke-dasharray: 22;
+  }
+  .mb-anim .mb-tick {
+    --mb-len: 7;
+    stroke-dasharray: 7;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .mb-anim .mb-m {
+      animation: mb-draw 0.9s cubic-bezier(0.5, 0.15, 0.2, 1) 0.05s both;
+    }
+    .mb-anim .mb-bench {
+      animation: mb-draw 0.5s ease-out both;
+    }
+    .mb-anim .mb-tick {
+      animation: mb-draw 0.4s ease-out 0.72s both;
+    }
+    .mb-anim .mb-node {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: mb-node-in 0.5s cubic-bezier(0.34, 1.4, 0.5, 1) 0.98s both;
+    }
+  }
+}
